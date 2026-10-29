@@ -1,0 +1,1399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Autopad</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
+<style>
+/* Blank white sheet on load; hard-hat agents roam the whole document and construct each part in place. */
+:root{
+  --bg:#ffffff; --ink:#141512; --dim:#6f706b; --line:#e7e7e2; --panel:#fcfcfa;
+  --green:#0b9e68; --green-raw:#14F195; --purple:#8a3ffc; --red:#d6454c; --hat:#f4c21a;
+  --display:'Press Start 2P',monospace;
+  --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg);color:var(--ink);
+  font-family:var(--mono);font-size:14px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:calc(60px + env(safe-area-inset-bottom,0px));
+  min-height:100vh;
+}
+img{max-width:100%}
+a{color:var(--ink)}
+button{font-family:var(--mono)}
+:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
+
+/* construction states */
+.part.pending{visibility:hidden}
+.part.scaffold{visibility:visible;outline:2px dashed var(--dim);outline-offset:4px;position:relative}
+.part.scaffold>*{visibility:hidden}
+.part.scaffold::before{
+  content:"UNDER CONSTRUCTION";visibility:visible;position:absolute;top:-11px;left:8px;z-index:2;
+  font-size:8px;letter-spacing:.18em;
+  background:repeating-linear-gradient(45deg,var(--hat) 0 8px,#141512 8px 16px);
+  padding:3px 8px;color:#fff;text-shadow:0 0 2px #141512,0 0 2px #141512;
+}
+.part.built{visibility:visible;animation:popin .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes popin{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.part.built{animation:none}}
+
+/* nav */
+nav{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding-block:18px 12px;border-bottom:2px solid var(--ink)}
+.logo{font-family:var(--display);font-size:15px;letter-spacing:1px}
+.logo .dot{color:var(--green)}
+nav .links{display:flex;gap:14px;font-size:12px;flex-wrap:wrap}
+nav .links a{text-decoration:none;border-bottom:2px solid transparent;padding-bottom:1px}
+nav .links a:hover{border-bottom-color:var(--green)}
+.spacer{flex:1}
+.badge{font-size:11px;border:1px solid var(--ink);padding:2px 8px;border-radius:999px;letter-spacing:.06em}
+.badge.live{border-color:var(--green);color:var(--green)}
+.badge.live::before{content:"●";margin-right:5px;animation:blink 1.6s steps(2) infinite}
+.badge.ai{border-color:var(--purple);color:var(--purple)}
+.badge.chain-on{border-color:var(--green);color:var(--green)}
+.badge.chain-off{border-style:dashed;color:var(--dim)}
+@keyframes blink{50%{opacity:.25}}
+
+/* ticker */
+.ticker{border-bottom:1px solid var(--line);overflow:hidden;white-space:nowrap;font-size:12px;color:var(--dim);padding-block:6px}
+.ticker b{color:var(--ink);font-weight:600}
+.ticker-inner{display:inline-block;animation:slide 40s linear infinite}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media (prefers-reduced-motion:reduce){.ticker-inner{animation:none}}
+
+/* hero */
+.hero{padding-block:30px 24px;max-width:72ch}
+.hero h1{font-family:var(--display);font-size:clamp(16px,3.4vw,26px);line-height:1.7;margin:0 0 14px;text-wrap:balance}
+.hero h1 .g{color:var(--green)}
+.hero p{margin:0 0 16px;color:var(--dim)}
+.cta-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.launch-btn{
+  font-family:var(--display);font-size:11px;letter-spacing:1px;
+  background:var(--green-raw);color:#06351f;border:2px solid var(--ink);
+  padding:14px 18px;cursor:pointer;box-shadow:4px 4px 0 var(--ink);
+}
+.launch-btn:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+.launch-btn:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
+.cta-note{font-size:11px;color:var(--dim)}
+
+/* grid */
+.grid{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:22px;align-items:start;padding-block:10px 30px}
+@media (max-width:980px){.grid{grid-template-columns:1fr 1fr}}
+@media (max-width:660px){.grid{grid-template-columns:1fr}}
+.col{min-width:0}
+.col h2{font-family:var(--display);font-size:11px;letter-spacing:1px;margin:0 0 4px;display:flex;align-items:center;gap:8px;scroll-margin-top:12px}
+.col .sub{font-size:12px;color:var(--dim);margin:0 0 14px}
+.count{font-family:var(--mono);font-size:11px;color:var(--dim);font-weight:400}
+
+/* composer + feed */
+.composer{display:flex;gap:8px;margin-bottom:14px}
+.composer input{flex:1;min-width:0;border:2px solid var(--ink);background:var(--bg);color:var(--ink);font:inherit;padding:9px 11px;border-radius:0}
+.composer input::placeholder{color:var(--dim)}
+.composer button{border:2px solid var(--ink);background:var(--ink);color:#fff;padding:9px 14px;cursor:pointer;font-weight:600;font-size:13px}
+.composer button:hover{background:var(--green);border-color:var(--green)}
+.mode-note{font-size:11px;color:var(--dim);margin:-6px 0 14px}
+.mode-note.err{color:var(--red)}
+.feed{display:flex;flex-direction:column;gap:10px}
+.sug{border:1px solid var(--line);background:var(--bg);display:flex;gap:10px;padding:10px 12px;align-items:flex-start}
+.sug.building{border-color:var(--purple)}
+.sug.shipped{border-color:var(--green);background:var(--panel)}
+.votebox{display:flex;flex-direction:column;align-items:center;gap:2px;flex:none;min-width:34px}
+.votebox button{border:1px solid var(--line);background:var(--bg);width:30px;height:24px;cursor:pointer;line-height:1;font-size:12px;color:var(--dim);padding:0}
+.votebox button:hover{border-color:var(--ink);color:var(--ink)}
+.votebox button.on-up{background:var(--green);border-color:var(--green);color:#fff}
+.votebox button.on-dn{background:var(--red);border-color:var(--red);color:#fff}
+.score{font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
+.sug-body{min-width:0;flex:1}
+.sug-text{margin:0;overflow-wrap:anywhere}
+.sug-text .tk{color:var(--purple);font-weight:600}
+.sug-meta{font-size:11px;color:var(--dim);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{font-size:10px;letter-spacing:.05em;padding:1px 6px;border:1px solid currentColor}
+.chip.q{color:var(--dim)} .chip.b{color:var(--purple)} .chip.s{color:var(--green)} .chip.err{color:var(--red)}
+.ship time .chip{margin-left:2px}
+.empty{border:1px dashed var(--line);padding:22px 16px;color:var(--dim);font-size:13px;text-align:center}
+.empty b{color:var(--ink)}
+
+/* build column */
+.buildcard{border:2px solid var(--purple);padding:14px;position:relative}
+.buildcard.idle{border:2px dashed var(--line);color:var(--dim)}
+.buildcard h3{margin:0 0 8px;font-size:13px;overflow-wrap:anywhere}
+.bar{height:14px;border:1px solid var(--ink);background:var(--bg);position:relative;overflow:hidden}
+.bar i{display:block;height:100%;background:repeating-linear-gradient(45deg,var(--purple) 0 8px,#a86bff 8px 16px);width:0%;transition:width .9s linear}
+.bar.curve i{background:repeating-linear-gradient(45deg,var(--green-raw) 0 8px,#5ff7b8 8px 16px)}
+.pct{font-size:11px;color:var(--dim);margin-top:5px;font-variant-numeric:tabular-nums;display:flex;justify-content:space-between}
+.shiplog{margin-top:16px;display:flex;flex-direction:column;gap:8px}
+.ship{border-left:3px solid var(--green);padding:4px 10px;font-size:12px;overflow-wrap:anywhere}
+.ship time{color:var(--dim);display:block;font-size:11px}
+
+/* launchpad tokens */
+.tokens{display:flex;flex-direction:column;gap:12px}
+.tok{border:1px solid var(--ink);padding:12px;border-left-width:5px}
+.tok .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pfp{width:36px;height:36px;flex:none;border:2px solid var(--ink);object-fit:cover;image-rendering:auto;display:inline-flex;align-items:center;justify-content:center;background:var(--bg)}
+.pfp.ph{font-family:var(--display);font-size:12px;color:var(--ink)}
+.pfp-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pfp-row input[type=file]{font-size:11px;min-width:0}
+.pfp-row button{border:1px solid var(--ink);background:var(--bg);font-size:10px;padding:4px 8px;cursor:pointer}
+.pfp-hint{font-size:10px;letter-spacing:0;color:var(--dim)}
+.tok .sym{font-family:var(--display);font-size:11px}
+.tok .name{color:var(--dim);font-size:12px;min-width:0;overflow-wrap:anywhere}
+.tok .tag{font-size:12px;margin:6px 0 0;overflow-wrap:anywhere}
+.tok .lore{font-size:11px;color:var(--dim);margin:4px 0 0;overflow-wrap:anywhere}
+.tok .stats{display:flex;gap:14px;font-size:11px;color:var(--dim);margin:8px 0 6px;font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.tok .stats b{color:var(--ink)}
+.mintline{margin-top:8px;font-size:11px;letter-spacing:.05em;color:var(--purple)}
+.mintline a{color:var(--purple)}
+.tradelink{color:var(--green)!important;font-weight:600}
+.grad{margin-top:8px;font-size:11px;font-weight:600;color:var(--green);letter-spacing:.05em}
+.grad::before{content:"▲ "}
+.pill-ray{display:inline-block;border:1px solid var(--green);color:var(--green);padding:1px 7px;font-size:10px;margin-left:6px}
+
+/* launch tab */
+.launch{border-top:2px solid var(--ink);padding-block:20px 26px}
+.launch h2{font-family:var(--display);font-size:11px;letter-spacing:1px;margin:0 0 4px;scroll-margin-top:12px}
+.launch .sub{font-size:12px;color:var(--dim);margin:0 0 16px}
+.launch-wrap{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+@media (max-width:760px){.launch-wrap{grid-template-columns:1fr}}
+.launch-form{display:flex;flex-direction:column;gap:12px;min-width:0}
+.launch-form label{display:flex;flex-direction:column;gap:5px;font-size:10px;letter-spacing:.12em;color:var(--dim)}
+.launch-form input[type=text],.launch-form input:not([type]){border:2px solid var(--ink);background:var(--bg);color:var(--ink);font:14px var(--mono);padding:9px 11px;border-radius:0}
+.swatches{display:flex;gap:8px}
+.swatches button{width:28px;height:28px;border:2px solid var(--line);cursor:pointer;padding:0}
+.swatches button.on{border-color:var(--ink);outline:2px solid var(--ink);outline-offset:1px}
+.swatches.rewards{flex-wrap:wrap}
+.rbtn{width:auto!important;height:auto!important;font:9px var(--display);letter-spacing:.5px;padding:7px 8px!important;background:var(--bg);color:var(--ink);border:1px solid var(--line)!important;outline:none!important}
+.rbtn.on{background:var(--ink);color:#fff;border-color:var(--ink)!important}
+.rew-line{margin-top:8px;font-size:10px;letter-spacing:.08em;color:var(--dim)}
+.rew-line b{color:var(--ink)}
+.launch-form input[type=range]{accent-color:var(--ink);width:100%}
+.curveval{color:var(--ink);font-family:var(--mono);font-size:12px;font-variant-numeric:tabular-nums;letter-spacing:0}
+.launch-btn.small{font-size:10px;padding:12px 14px;align-self:flex-start}
+.launch-btn.ghost{background:var(--bg);color:var(--ink);box-shadow:3px 3px 0 var(--line)}
+.lf-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.lf-or{font-size:10px;color:var(--dim);letter-spacing:0;max-width:220px}
+.lf-divider{font-size:10px;color:var(--dim);letter-spacing:.2em;text-align:center;max-width:320px}
+.lf-buy{margin-top:-2px}
+.launch-preview{min-width:0}
+.pv-label{font-size:9px;letter-spacing:.16em;color:var(--dim);margin-bottom:8px}
+
+/* community build zone — modules Claude ships */
+.zone{border-top:2px solid var(--ink);padding-block:20px 26px}
+.zone h2{font-family:var(--display);font-size:11px;letter-spacing:1px;margin:0 0 4px;scroll-margin-top:12px}
+.zone .sub{font-size:12px;color:var(--dim);margin:0 0 16px}
+.mods{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.mod{border:1px solid var(--ink);padding:14px;min-width:0}
+.mod h3{font-family:var(--display);font-size:10px;letter-spacing:.5px;margin:0 0 8px;overflow-wrap:anywhere}
+.mod .blurb{font-size:12px;color:var(--dim);margin:0 0 10px;overflow-wrap:anywhere}
+.mod dl{margin:0;display:flex;flex-direction:column;gap:8px;font-size:12px}
+.mod dt{font-weight:600}
+.mod dd{margin:0;color:var(--dim);overflow-wrap:anywhere}
+.mod details{border:1px solid var(--line);padding:6px 9px;font-size:12px}
+.mod details+details{margin-top:6px}
+.mod summary{cursor:pointer;font-weight:600}
+.mod details p{margin:6px 0 0;color:var(--dim)}
+.mod .chk{display:flex;gap:8px;align-items:flex-start;font-size:12px;cursor:pointer}
+.mod .chk+.chk{margin-top:7px}
+.mod .chk input{accent-color:var(--green);margin-top:2px;flex:none}
+.mod .chk b{display:block}
+.mod .chk span{color:var(--dim)}
+.mod .chk input:checked~div{text-decoration:line-through;color:var(--dim)}
+.mod iframe.applet{width:100%;height:340px;border:1px solid var(--line);background:#fff;display:block}
+.mod .sandbox-tag{font-size:9px;letter-spacing:.14em;color:var(--dim);margin-top:5px}
+.mod .statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px}
+.mod .stat{border:1px solid var(--line);padding:8px;min-width:0}
+.mod .stat b{display:block;font-family:var(--display);font-size:12px;margin-bottom:4px;overflow-wrap:anywhere}
+.mod .stat span{font-size:10px;color:var(--dim);letter-spacing:.06em}
+.mod .by{font-size:10px;color:var(--dim);margin-top:10px;letter-spacing:.08em}
+.mod .by.claude{color:var(--purple)}
+
+/* fees + how + footer */
+.fees{border-top:2px solid var(--ink);padding-block:20px 26px}
+.fees h2{font-family:var(--display);font-size:11px;letter-spacing:1px;margin:0 0 14px;scroll-margin-top:12px}
+.fee-split{display:flex;height:34px;border:2px solid var(--ink);overflow:hidden;max-width:720px}
+.fee-split div{display:flex;align-items:center;justify-content:center;font-size:10px;letter-spacing:.04em;color:#fff;min-width:0;padding:0 4px;text-align:center}
+.f1{flex:5;background:var(--green)} .f2{flex:3;background:var(--purple)} .f3{flex:2;background:var(--ink)}
+.fee-note{font-size:12px;color:var(--dim);margin-top:10px;max-width:70ch}
+.fee-note b{color:var(--ink)}
+.how{border-top:2px solid var(--ink);padding-block:20px 26px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;font-size:12px}
+@media (max-width:860px){.how{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:480px){.how{grid-template-columns:1fr}}
+.how .step{min-width:0}
+.how .k{font-family:var(--display);font-size:10px;display:block;margin-bottom:6px}
+.how p{margin:0;color:var(--dim)}
+footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px solid var(--line)}
+
+/* token page */
+.tok{cursor:pointer}
+.tok:hover{outline:2px solid var(--ink)}
+.tokpage{position:fixed;inset:0;z-index:50;background:rgba(255,255,255,.92);overflow-y:auto;padding:30px max(16px,env(safe-area-inset-left,0px)) 40px}
+.tokpage-inner{max-width:620px;margin:0 auto;background:var(--bg);border:2px solid var(--ink);box-shadow:6px 6px 0 var(--ink);padding:18px;position:relative;animation:popin .3s cubic-bezier(.2,1.4,.4,1)}
+.tp-close{position:absolute;top:10px;right:10px;border:1px solid var(--ink);background:var(--bg);font-size:10px;letter-spacing:.1em;padding:5px 9px;cursor:pointer}
+.tp-close:hover{background:var(--ink);color:#fff}
+.tp-head{display:flex;gap:14px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.pfp.big{width:72px;height:72px;font-size:22px}
+.tp-title{min-width:0}
+.tp-title .sym{font-family:var(--display);font-size:14px;display:block;margin-bottom:4px}
+.tp-title .name{color:var(--dim);font-size:13px}
+.tp-title .tag{margin:4px 0 0;font-size:13px;overflow-wrap:anywhere}
+.tokpage .lore{font-size:13px;color:var(--dim);border-left:3px solid var(--line);padding-left:10px;overflow-wrap:anywhere}
+.tokpage .stats{display:flex;gap:16px;font-size:12px;color:var(--dim);margin:12px 0 8px;font-variant-numeric:tabular-nums;flex-wrap:wrap}
+.tokpage .stats b{color:var(--ink)}
+#tpChart{width:100%;height:120px;border:1px solid var(--line);margin-top:12px;display:block}
+.trade{border:2px solid var(--ink);padding:10px 12px;margin-top:14px}
+.trade-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.trade-row input{width:110px;min-width:0;border:2px solid var(--ink);background:var(--bg);color:var(--ink);font:13px var(--mono);padding:7px 9px}
+.trade-row .unit{font-size:10px;color:var(--dim)}
+.trade-row button{border:2px solid var(--ink);background:var(--bg);font:10px var(--display);letter-spacing:.5px;padding:9px 12px;cursor:pointer}
+.trade-row button:hover{background:var(--ink);color:#fff}
+.trade-row .tbuy{background:var(--green-raw);color:#06351f}
+.trade-row .tsell{background:#ffe7e8;color:var(--red);border-color:var(--red)}
+.trade-addr{font-size:11px;color:var(--green);overflow-wrap:anywhere}
+.trade-note{font-size:10px;color:var(--dim);margin-top:8px;overflow-wrap:anywhere}
+.trade-note.err{color:var(--red)}
+.trade-note a{color:var(--green)}
+.tp-links{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap;font-size:12px}
+.tp-links a{color:var(--purple)}
+.tp-links button{border:1px solid var(--ink);background:var(--bg);font-size:10px;letter-spacing:.1em;padding:6px 10px;cursor:pointer}
+.tp-links button:hover{background:var(--ink);color:#fff}
+.tp-note{font-size:11px;color:var(--green)}
+.tp-sub{font-size:9px;letter-spacing:.16em;color:var(--dim);margin:14px 0 6px}
+.txlist{border:1px solid var(--line);max-height:190px;overflow-y:auto;font-size:11px;font-variant-numeric:tabular-nums}
+.tx{display:flex;gap:10px;padding:5px 9px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tx:last-child{border-bottom:0}
+.tx .side{width:36px;font-weight:600}
+.tx .side.buy{color:var(--green)} .tx .side.sell{color:var(--red)}
+.tx .w{color:var(--dim);margin-left:auto}
+.tp-foot{font-size:10px;letter-spacing:.08em;color:var(--dim);margin-top:14px}
+
+/* agent layer */
+#agentLayer{position:absolute;top:0;left:0;width:100%;overflow:hidden;pointer-events:none;z-index:30}
+.agent{position:absolute;width:26px;height:42px;will-change:transform}
+.agent svg{display:block;width:26px;height:42px}
+.agent .legA,.agent .legB{transform-origin:center 34px}
+.agent.walking .legA{animation:stepA .45s steps(2) infinite}
+.agent.walking .legB{animation:stepB .45s steps(2) infinite}
+@keyframes stepA{0%,100%{transform:translateX(0)}50%{transform:translateX(3px)}}
+@keyframes stepB{0%,100%{transform:translateX(0)}50%{transform:translateX(-3px)}}
+.agent.flip .sprite{transform:scaleX(-1)}
+.agent .hammer{position:absolute;top:8px;right:-12px;width:16px;height:16px;display:none;transform-origin:2px 14px}
+.agent.hammering .hammer{display:block;animation:swing .32s ease-in-out infinite alternate}
+@keyframes swing{from{transform:rotate(-55deg)}to{transform:rotate(25deg)}}
+.bub{position:absolute;bottom:46px;left:-24px;min-width:70px;max-width:170px;border:1px solid var(--ink);background:var(--bg);padding:4px 7px;font-size:10px;line-height:1.4;opacity:0;transition:opacity .3s;overflow-wrap:anywhere;white-space:normal}
+.bub.show{opacity:1}
+.spark{position:absolute;width:5px;height:5px;background:var(--hat);animation:fly .6s ease-out forwards;z-index:31}
+.spark.s2{background:var(--ink)}
+@keyframes fly{to{transform:translate(var(--dx),var(--dy));opacity:0}}
+.clank{position:absolute;font-family:var(--display);font-size:8px;color:var(--ink);animation:clank .7s ease-out forwards;z-index:31}
+@keyframes clank{to{transform:translateY(-22px);opacity:0}}
+@media (prefers-reduced-motion:reduce){
+  .agent.walking .legA,.agent.walking .legB,.agent.hammering .hammer{animation:none}
+  .spark,.clank{display:none}
+}
+#skipBtn{position:fixed;z-index:60;top:calc(10px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));font-size:10px;letter-spacing:.1em;border:1px solid var(--ink);background:var(--bg);padding:6px 10px;cursor:pointer}
+#skipBtn:hover{background:var(--ink);color:#fff}
+#siteStatus{position:fixed;z-index:25;left:0;right:0;top:42vh;text-align:center;font-size:10px;letter-spacing:.2em;color:var(--dim);padding-inline:max(16px,env(safe-area-inset-left,0px));transition:opacity .6s;pointer-events:none}
+#siteStatus.gone{opacity:0}
+</style>
+</head>
+<body>
+
+<div id="siteStatus">LOT 404 — AGENTS ON SITE · CONSTRUCTION BEGINNING</div>
+<button id="skipBtn" type="button">SKIP BUILD ▸</button>
+
+<nav class="part pending" id="p-nav">
+  <div class="logo">AUTOPAD<span class="dot">_</span></div>
+  <div class="links">
+    <a href="#launchTop">LAUNCH</a><a href="#feedTop">FEED</a><a href="#queueTop">QUEUE</a><a href="#padTop">LAUNCHPAD</a><a href="#zoneTop">BUILD ZONE</a><a href="#feesTop">FEES</a>
+  </div>
+  <div class="spacer"></div>
+  <span class="badge live">AGENTS RUNNING</span>
+  <span class="badge ai" id="aiBadge" hidden>DESIGNER: CLAUDE</span>
+  <span class="badge" id="chainBadge" title="Solana mainnet RPC status">SOLANA · RAYDIUM</span>
+</nav>
+
+<div class="ticker part pending" id="p-ticker"><div class="ticker-inner" id="ticker"></div></div>
+
+<section class="hero">
+  <h1 class="part pending" id="p-h1">A launchpad the <span class="g">agents build</span> in front of you.</h1>
+  <p class="part pending" id="p-hp"><span id="heroTagline">You're watching the crew assemble this site right now — and they never stop. Drop a suggestion in the feed, the crowd votes, and whatever tops the queue gets designed and built next: site modules, pages, and meme tokens that launch on a bonding curve and graduate to Raydium.</span></p>
+  <div class="cta-row part pending" id="p-cta">
+    <button class="launch-btn" id="launchBtn" type="button">LAUNCH A TOKEN</button>
+    <span class="cta-note">no founders · no roadmap · the queue decides</span>
+  </div>
+</section>
+
+<section class="launch part pending" id="p-launch">
+  <h2 id="launchTop">LAUNCH TAB</h2>
+  <p class="sub">name it, pick the look — then launch it yourself on-chain from your own wallet, or submit it to the vote queue for free. <span id="launchVotesNote">Hit the vote threshold and the crew builds it.</span></p>
+  <div class="launch-wrap">
+    <form id="launchForm" class="launch-form">
+      <label>NAME<input id="lfName" maxlength="40" placeholder="Mooncat" required></label>
+      <label>TICKER<input id="lfTicker" maxlength="11" placeholder="$MOONCAT" required></label>
+      <label>TAGLINE<input id="lfTag" maxlength="80" placeholder="a cat that buys the dip"></label>
+      <label>PFP (OPTIONAL)
+        <span class="pfp-row">
+          <input type="file" id="lfPfp" accept="image/png,image/jpeg,image/webp">
+          <button type="button" id="lfPfpClear" hidden>REMOVE</button>
+        </span>
+        <span class="pfp-hint">square works best — it's resized to 96px and shown on the card</span>
+      </label>
+      <label>ACCENT
+        <span class="swatches" id="lfSwatches">
+          <button type="button" data-c="#8a3ffc" style="background:#8a3ffc" class="on" aria-label="purple"></button>
+          <button type="button" data-c="#0b9e68" style="background:#0b9e68" aria-label="green"></button>
+          <button type="button" data-c="#d6454c" style="background:#d6454c" aria-label="red"></button>
+          <button type="button" data-c="#2b6fd6" style="background:#2b6fd6" aria-label="blue"></button>
+          <button type="button" data-c="#c79a1b" style="background:#c79a1b" aria-label="gold"></button>
+        </span>
+      </label>
+      <label>HOLDER REWARDS
+        <span class="swatches rewards" id="lfRewards">
+          <button type="button" data-r="dividend" class="rbtn on">DIVIDEND</button>
+          <button type="button" data-r="buyback" class="rbtn">BUYBACK+BURN</button>
+          <button type="button" data-r="lottery" class="rbtn">LOTTERY</button>
+          <button type="button" data-r="multiplier" class="rbtn">HOLD&nbsp;MULT</button>
+        </span>
+        <span class="pfp-hint" id="lfRewardHint">pro-rata SOL dividends to holders — funded from this token's fee stream</span>
+      </label>
+      <label>CURVE TARGET <span id="lfCurveVal" class="curveval">50 SOL</span>
+        <input type="range" id="lfCurve" min="30" max="85" value="50">
+      </label>
+      <div class="lf-actions">
+        <button type="button" class="launch-btn small" id="lfWalletLaunch">CONNECT WALLET · LAUNCH NOW</button>
+        <span class="lf-or">you pay the launch fee (~0.03 SOL) and own the launch</span>
+      </div>
+      <label class="lf-buy">FIRST BUY (OPTIONAL)
+        <span class="pfp-row"><input id="lfBuySol" inputmode="decimal" placeholder="0" style="max-width:90px"><span class="pfp-hint">SOL bought by you at launch, before anyone else</span></span>
+      </label>
+      <div class="lf-divider">— or —</div>
+      <button type="submit" class="launch-btn small ghost">SUBMIT TO VOTE QUEUE (FREE)</button>
+      <p class="mode-note" id="launchNote"></p>
+    </form>
+    <div class="launch-preview">
+      <div class="pv-label">PREVIEW — HOW IT LANDS ON THE BOARD</div>
+      <div class="tok" id="lfPreview" style="border-left-color:#8a3ffc">
+        <div class="row"><span class="pfp ph" id="pvPfp">M</span><span class="sym" id="pvSym">$MOONCAT</span><span class="name" id="pvName">Mooncat</span></div>
+        <p class="tag" id="pvTag">a cat that buys the dip</p>
+        <div class="stats"><span>curve <b>0%</b></span><span><b>0</b> / <span id="pvTarget">50</span> SOL</span><span><b>0</b> holders</span></div>
+        <div class="bar curve"><i style="width:0%"></i></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<main class="grid">
+  <div class="col part pending" id="p-feed">
+    <h2 id="feedTop">SUGGESTION FEED <span class="count" id="feedCount"></span></h2>
+    <p class="sub" id="feedSub">tell the agents what to build. $TICKER in your message = token proposal.</p>
+    <form class="composer" id="composer">
+      <input id="sugInput" maxlength="180" placeholder='e.g. "$MOONCAT — a cat that buys the dip"' aria-label="Suggestion">
+      <button type="submit">POST</button>
+    </form>
+    <p class="mode-note" id="modeNote">connecting to site…</p>
+    <div class="feed" id="feed"><div class="empty"><b>Connecting…</b></div></div>
+  </div>
+
+  <div class="col part pending" id="p-queue">
+    <h2 id="queueTop">BUILD QUEUE</h2>
+    <p class="sub">whatever leads the vote gets built. one job at a time.</p>
+    <div id="buildSlot"></div>
+    <div class="shiplog" id="shipLog"></div>
+  </div>
+
+  <div class="col part pending" id="p-pad">
+    <h2 id="padTop">LAUNCHPAD <span class="count" id="padCount"></span></h2>
+    <p class="sub">shipped token proposals go live on a bonding curve.</p>
+    <div class="tokens" id="tokens"><div class="empty">Nothing launched yet. Get a <b>$TICKER</b> suggestion voted to the top.</div></div>
+  </div>
+</main>
+
+<section class="zone part pending" id="p-zone">
+  <h2 id="zoneTop">COMMUNITY BUILD ZONE <span class="count" id="zoneCount"></span></h2>
+  <p class="sub">non-token suggestions that won the vote get designed by the crew and installed here as real site modules.</p>
+  <div class="mods" id="mods"><div class="empty">Empty lot. The first feature suggestion to top the queue gets built on this spot.</div></div>
+</section>
+
+<section class="fees part pending" id="p-fees">
+  <h2 id="feesTop">FEE STRUCTURE</h2>
+  <div class="fee-split">
+    <div class="f1" id="feeA">50% BUILD CREW</div>
+    <div class="f2" id="feeB">30% LP</div>
+    <div class="f3" id="feeC">20% BURN</div>
+  </div>
+  <p class="fee-note" id="feeNote"><b>1% fee on every curve trade.</b> The crew share funds the agent treasury that builds whatever the queue votes up; the LP share deepens the Raydium pool at graduation; the burn share is burned every Friday, on-chain, in public. These numbers are votable — suggest a change in the feed.</p>
+  <p class="fee-note">On top of the split, every token picks a <b>holder reward mechanism</b> at launch — dividend, buyback &amp; burn, lottery, or hold multiplier — funded from its own fee stream and shown on its card and token page. The site default is votable (<span id="feeDefaultReward">dividend</span>).</p>
+</section>
+
+<section class="how part pending" id="p-how">
+  <div class="step"><span class="k">01 SUGGEST</span><p>Anyone posts to the feed. Token ideas carry a $TICKER; everything else is treated as a site feature.</p></div>
+  <div class="step"><span class="k">02 VOTE</span><p>One up or down vote per visitor per suggestion. The feed re-ranks live.</p></div>
+  <div class="step"><span class="k">03 BUILD</span><p>The crew pulls the #1 queued item, designs it with Claude, and works it to 100%. The queue is the roadmap.</p></div>
+  <div class="step"><span class="k">04 LAUNCH</span><p>Shipped tokens open on a bonding curve. At full curve, liquidity graduates to a Raydium pool.</p></div>
+</section>
+
+<footer class="part pending" id="p-foot">Autopad — permanently under construction. Suggestions, votes and shipped modules are live and shared. Tokens, SOL figures and the Raydium graduation are simulated until the on-chain program ships.<br><span id="chainFoot">chain: checking…</span> <span id="verFoot"></span></footer>
+
+<div class="tokpage" id="tokPage" hidden>
+  <div class="tokpage-inner" role="dialog" aria-modal="true" aria-label="Token page">
+    <button class="tp-close" id="tpClose" type="button">× CLOSE</button>
+    <div class="tp-head">
+      <span class="pfp big ph" id="tpPfp">?</span>
+      <div class="tp-title">
+        <span class="sym" id="tpSym">$TOKEN</span>
+        <span class="name" id="tpName"></span>
+        <p class="tag" id="tpTag"></p>
+      </div>
+    </div>
+    <p class="lore" id="tpLore"></p>
+    <div class="rew-line" id="tpReward"></div>
+    <div class="stats" id="tpStats"></div>
+    <div class="bar curve"><i id="tpBar" style="width:0%"></i></div>
+    <canvas id="tpChart" width="560" height="140" aria-label="Price chart"></canvas>
+    <div class="tp-sub" id="tpChartLabel">PRICE (SIMULATED TAPE)</div>
+    <div class="tp-sub">TRANSACTIONS</div>
+    <div class="txlist" id="tpTx"><span class="tp-note" style="color:var(--dim)">loading tape…</span></div>
+    <div class="trade" id="tpTrade" hidden>
+      <div class="tp-sub">TRADE ON THE CURVE — FROM YOUR OWN WALLET</div>
+      <div class="trade-row">
+        <button type="button" id="twConnect">CONNECT PHANTOM</button>
+        <span class="trade-addr" id="twAddr"></span>
+      </div>
+      <div class="trade-row">
+        <input id="twBuyAmt" inputmode="decimal" placeholder="0.1" aria-label="Buy amount in SOL"><span class="unit">SOL</span>
+        <button type="button" class="tbuy" id="twBuy">BUY</button>
+        <input id="twSellAmt" inputmode="numeric" placeholder="1000000" aria-label="Sell amount in tokens"><span class="unit">TOK</span>
+        <button type="button" class="tsell" id="twSell">SELL</button>
+      </div>
+      <div class="trade-note" id="twNote">you sign in Phantom — Autopad never holds your keys or funds.</div>
+    </div>
+    <div class="tp-links">
+      <span id="tpMint"></span>
+      <button type="button" id="tpShare">COPY LINK</button>
+      <span class="tp-note" id="tpShareNote"></span>
+    </div>
+    <div class="tp-foot" id="tpFoot"></div>
+  </div>
+</div>
+
+<div id="agentLayer"></div>
+
+<script>
+"use strict";
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* voter identity (per browser) */
+  var voterId;
+  try{
+    voterId=localStorage.getItem("autopad-voter");
+    if(!voterId){voterId="v_"+Math.random().toString(36).slice(2,12)+Date.now().toString(36);localStorage.setItem("autopad-voter",voterId)}
+  }catch(e){voterId="v_"+Math.random().toString(36).slice(2,12)+Date.now().toString(36)}
+  var myVotes={};
+  try{myVotes=JSON.parse(localStorage.getItem("autopad-myvotes")||"{}")}catch(e){}
+  function saveMyVotes(){try{localStorage.setItem("autopad-myvotes",JSON.stringify(myVotes))}catch(e){}}
+
+  var S={suggestions:[],tokens:[],modules:[],log:[],config:{},site:{}};
+
+  var REWARD_LABEL={dividend:"DIVIDEND",buyback:"BUYBACK+BURN",lottery:"LOTTERY",multiplier:"HOLD MULTIPLIER"};
+  var REWARD_DESC={dividend:"pro-rata SOL dividends to holders — funded from this token's fee stream",
+    buyback:"fees buy the token off the curve and burn it",
+    lottery:"the fee pool is raffled to one holder every epoch",
+    multiplier:"dividends scale with time held; selling resets the multiplier"};
+
+  /* ---------- AUTOPAD: the stable API voted site-mods build against ---------- */
+  var modListeners={state:[],"token-open":[]};
+  window.AUTOPAD={
+    state:function(){return S},
+    on:function(evt,fn){if(modListeners[evt]&&typeof fn==="function")modListeners[evt].push(fn)},
+    esc:function(s){var d=document.createElement("div");d.textContent=s==null?"":String(s);return d.innerHTML}
+  };
+  function emitMods(evt,payload){
+    (modListeners[evt]||[]).forEach(function(fn){try{fn(payload)}catch(e){}});
+  }
+  var firstPoll=true, firstData=true, knownModules={}, knownTokens={}, pendingBuilds=[];
+
+  /* ---------- helpers ---------- */
+  function esc(s){var d=document.createElement("div");d.textContent=s==null?"":String(s);return d.innerHTML}
+  function ago(t){
+    var d=Math.max(0,Date.now()-t);
+    if(d<60e3)return Math.floor(d/1e3)+"s ago";
+    if(d<3600e3)return Math.floor(d/60e3)+"m ago";
+    if(d<86400e3)return Math.floor(d/3600e3)+"h ago";
+    return Math.floor(d/86400e3)+"d ago";
+  }
+  function fmtText(t){
+    return esc(t).replace(/\$[A-Za-z][A-Za-z0-9]{1,9}/g,function(m){return '<span class="tk">'+m.toUpperCase()+'</span>'});
+  }
+
+  /* ---------- renderers ---------- */
+  function renderFeed(){
+    var list=S.suggestions.slice();
+    list.sort(function(a,b){
+      var ra=(a.status==="shipped"||a.status==="declined")?1:0, rb=(b.status==="shipped"||b.status==="declined")?1:0;
+      if(ra!==rb)return ra-rb;
+      if(b.score!==a.score)return b.score-a.score;
+      return a.createdAt-b.createdAt;
+    });
+    $("feedCount").textContent=list.length?("· "+list.length):"";
+    var el=$("feed");
+    if(!list.length){el.innerHTML='<div class="empty"><b>No suggestions yet.</b><br>Post the first one — the crew is standing around waiting for work.</div>';return}
+    /* queue hierarchy: rank eligible queued items exactly as the engine does */
+    var mv=S.config.minVotes||5;
+    var eligible=list.filter(function(x){return x.status==="queued"&&x.score>=mv})
+      .sort(function(a,b){return b.score-a.score||a.createdAt-b.createdAt});
+    var rank={};eligible.forEach(function(x,i){rank[x.id]=i+1});
+    el.innerHTML=list.map(function(s){
+      var mine=myVotes[s.id]||0;
+      var chip=s.status==="building"?'<span class="chip b">BUILDING</span>'
+        :s.status==="shipped"?'<span class="chip s">SHIPPED</span>'
+        :s.status==="declined"?'<span class="chip err" title="'+esc(s.buildNote||"")+'">DECLINED</span>'
+        :rank[s.id]
+          ?'<span class="chip q">#'+rank[s.id]+' IN QUEUE</span>'
+          :'<span class="chip q">NEEDS '+Math.max(1,(S.config.minVotes||5)-s.score)+' MORE VOTE'+(((S.config.minVotes||5)-s.score)===1?'':'S')+'</span>';
+      return '<article class="sug '+esc(s.status||"queued")+'">'
+        +'<div class="votebox">'
+        +'<button data-v="1" data-id="'+esc(s.id)+'" class="'+(mine>0?"on-up":"")+'" aria-label="Upvote">▲</button>'
+        +'<span class="score">'+(s.score|0)+'</span>'
+        +'<button data-v="-1" data-id="'+esc(s.id)+'" class="'+(mine<0?"on-dn":"")+'" aria-label="Downvote">▼</button>'
+        +'</div><div class="sug-body">'
+        +'<p class="sug-text">'+fmtText(s.text)+'</p>'
+        +'<div class="sug-meta">'+chip+'<span>anon</span><span>'+ago(s.createdAt)+'</span></div>'
+        +'</div></article>';
+    }).join("");
+  }
+
+  function renderBuild(){
+    var building=S.suggestions.find(function(s){return s.status==="building"});
+    var slot=$("buildSlot");
+    if(building){
+      slot.innerHTML='<div class="buildcard" id="buildAnchor">'
+        +'<h3>NOW BUILDING — '+fmtText(building.text)+'</h3>'
+        +'<div class="bar"><i style="width:'+building.buildPct+'%"></i></div>'
+        +'<div class="pct"><span>'+building.buildPct+'% complete</span><span>designer: '+(S.config.claude?"claude":"mock crew")+'</span></div></div>';
+    }else{
+      slot.innerHTML='<div class="buildcard idle" id="buildAnchor">Queue clear. The crew is roaming the site doing maintenance — upvote something to put them back to work.</div>';
+    }
+    var shipped=S.suggestions.filter(function(s){return s.status==="shipped"})
+      .sort(function(a,b){return (b.shippedAt||0)-(a.shippedAt||0)}).slice(0,6);
+    var KIND_LABELS={sitemod:["LIVE CODE","b"],applet:["APP","b"],token:["TOKEN","s"],setting:["SETTING","s"],hook:["HOOK","s"],module:["CONTENT","q"]};
+    $("shipLog").innerHTML=shipped.map(function(s){
+      var kl=KIND_LABELS[s.buildKind]||["?","q"];
+      var out='<span class="chip '+kl[1]+'">'+kl[0]+'</span>';
+      if(s.buildNote)out='<span class="chip err">'+esc(s.buildNote.toUpperCase())+'</span>';
+      return '<div class="ship">'+fmtText(s.text)+'<time>shipped '+ago(s.shippedAt)+' · '+out+'</time></div>';
+    }).join("");
+  }
+
+  function fmtUsd(n){
+    if(n>=1e6)return "$"+(n/1e6).toFixed(2)+"M";
+    if(n>=1e3)return "$"+(n/1e3).toFixed(1)+"K";
+    return "$"+Math.round(n);
+  }
+  function tokStats(t){
+    if((S.site.priceDisplay||"sol")==="usd"){
+      var px=S.config.solPriceUsd||180;
+      // simulated curve mcap: ~$4k floor to a graduation mcap scaled by the SOL target
+      var gradMcap=t.curveTargetSol*px*9.5;
+      var mcap=4000+(t.curvePct/100)*Math.max(0,gradMcap-4000);
+      return '<span>mcap <b>'+fmtUsd(mcap)+'</b></span>'
+        +'<span>raised <b>'+fmtUsd(t.solRaised*px)+'</b></span>'
+        +'<span>curve <b>'+t.curvePct+'%</b></span>'
+        +'<span><b>'+t.holders+'</b> holders</span>';
+    }
+    return '<span>curve <b>'+t.curvePct+'%</b></span>'
+      +'<span><b>'+t.solRaised+'</b> / '+t.curveTargetSol+' SOL</span>'
+      +'<span><b>'+t.holders+'</b> holders</span>';
+  }
+
+  function renderPad(){
+    $("padCount").textContent=S.tokens.length?("· "+S.tokens.length):"";
+    var el=$("tokens");
+    if(!S.tokens.length){el.innerHTML='<div class="empty">Nothing launched yet. Get a <b>$TICKER</b> suggestion voted to the top.</div>';return}
+    el.innerHTML=S.tokens.map(function(t){
+      var pfpEl=t.pfp
+        ?'<img class="pfp" src="/api/pfp/'+esc(t.id)+'" alt="" style="border-color:'+esc(t.color)+'">'
+        :'<span class="pfp ph" style="border-color:'+esc(t.color)+'">'+esc((t.symbol||"$?").charAt(1))+'</span>';
+      return '<div class="tok part '+(knownTokens[t.id]||"built")+'" data-tid="'+esc(t.id)+'" style="border-left-color:'+esc(t.color)+'">'
+        +'<div class="row">'+pfpEl+'<span class="sym">'+esc(t.symbol)+'</span><span class="name">'+esc(t.name)+'</span></div>'
+        +'<p class="tag">'+esc(t.tagline)+'</p>'
+        +(t.lore?'<p class="lore">'+esc(t.lore)+'</p>':'')
+        +'<div class="stats">'+tokStats(t)+'</div>'
+        +'<div class="rew-line">REWARDS: <b>'+esc(REWARD_LABEL[t.reward]||"DIVIDEND")+'</b> · pool '+(+t.rewardPoolSol||0)+' SOL</div>'
+        +'<div class="bar curve"><i style="width:'+t.curvePct+'%"></i></div>'
+        +(t.onchain?'<div class="mintline">MINT <a href="'+esc(t.onchain.explorer)+'" target="_blank" rel="noopener">'+esc(t.onchain.mint.slice(0,4)+"…"+t.onchain.mint.slice(-4))+' ↗</a>'
+          +(t.onchain.tradeUrl?' · <a class="tradelink" href="'+esc(t.onchain.tradeUrl)+'" target="_blank" rel="noopener">TRADE ON RAYDIUM ↗</a>':'')+'</div>':'')
+        +(t.graduated?'<div class="grad">GRADUATED<span class="pill-ray">LP → RAYDIUM</span></div>':'')
+        +'</div>';
+    }).join("");
+  }
+
+  var zoneSig="";
+  function renderZone(){
+    $("zoneCount").textContent=S.modules.length?("· "+S.modules.length):"";
+    var el=$("mods");
+    if(!S.modules.length){el.innerHTML='<div class="empty">Empty lot. The first feature suggestion to top the queue gets built on this spot.</div>';zoneSig="";return}
+    var sig=S.modules.map(function(m){return m.id}).join("|");
+    if(sig===zoneSig)return; // keep open FAQs / ticked checklists intact between polls
+    zoneSig=sig;
+    el.innerHTML=S.modules.slice().reverse().map(function(m){
+      var items=m.items||[], body;
+      if(m.widget==="applet"){
+        body='<iframe class="applet" data-applet="'+esc(m.id)+'" sandbox="allow-scripts" title="'+esc(m.title)+'"></iframe>'
+            +'<div class="sandbox-tag">SANDBOXED BUILD — no network, no site access</div>';
+      }else if(m.widget==="faq"){
+        body=items.map(function(it){return '<details><summary>'+esc(it.h)+'</summary><p>'+esc(it.p)+'</p></details>'}).join("");
+      }else if(m.widget==="checklist"){
+        body=items.map(function(it,ix){return '<label class="chk"><input type="checkbox" id="'+esc(m.id)+'-c'+ix+'"><div><b>'+esc(it.h)+'</b><span>'+esc(it.p)+'</span></div></label>'}).join("");
+      }else if(m.widget==="stat"){
+        body='<div class="statgrid">'+items.map(function(it){return '<div class="stat"><b>'+esc(it.p)+'</b><span>'+esc(it.h)+'</span></div>'}).join("")+'</div>';
+      }else{
+        body='<dl>'+items.map(function(it){return '<div><dt>'+esc(it.h)+'</dt><dd>'+esc(it.p)+'</dd></div>'}).join("")+'</dl>';
+      }
+      return '<div class="mod part '+(knownModules[m.id]||"built")+'" data-mid="'+esc(m.id)+'">'
+        +'<h3>'+esc(m.title)+'</h3>'
+        +(m.blurb?'<p class="blurb">'+esc(m.blurb)+'</p>':'')
+        +body
+        +'<div class="by '+(m.builtBy==="claude"?"claude":"")+'">BUILT BY '+(m.builtBy==="claude"?"CLAUDE + CREW":"MOCK CREW")+' · '+esc(ago(m.shippedAt))+'</div>'
+        +'</div>';
+    }).join("");
+    hydrateApplets();
+  }
+
+  /* ---------- token pages (click a card) ---------- */
+  var openTokenId=null;
+  function hash32(s){var h=0;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h}
+  var marketCache={};
+  function drawPriceChart(t,series){
+    var c=$("tpChart"),x=c.getContext("2d");
+    x.clearRect(0,0,c.width,c.height);
+    x.strokeStyle="#e7e7e2";x.lineWidth=1;
+    for(var g=1;g<4;g++){x.beginPath();x.moveTo(0,g*c.height/4);x.lineTo(c.width,g*c.height/4);x.stroke()}
+    if(!series||series.length<2){x.fillStyle="#6f706b";x.font="11px IBM Plex Mono";x.fillText("tape warming up — check back in a minute",12,c.height/2);return}
+    var min=Infinity,max=-Infinity;
+    series.forEach(function(p){if(p.priceSol<min)min=p.priceSol;if(p.priceSol>max)max=p.priceSol});
+    var span=(max-min)||1;
+    x.strokeStyle=t.color||"#0b9e68";x.lineWidth=2.5;x.beginPath();
+    series.forEach(function(p,i){
+      var px=i/(series.length-1)*c.width;
+      var py=c.height-10-((p.priceSol-min)/span)*(c.height-24);
+      i?x.lineTo(px,py):x.moveTo(px,py);
+    });
+    x.stroke();
+    var last=series[series.length-1];
+    var ly=c.height-10-((last.priceSol-min)/span)*(c.height-24);
+    x.fillStyle=t.color||"#0b9e68";x.fillRect(c.width-5,ly-3,5,6);
+  }
+  function renderTx(trades){
+    var el=$("tpTx");
+    if(!trades||!trades.length){el.innerHTML='<span class="tp-note" style="color:var(--dim)">no trades yet — the tape starts within a minute of launch</span>';return}
+    el.innerHTML=trades.map(function(tx){
+      return '<div class="tx"><span class="side '+(tx.side==="buy"?"buy":"sell")+'">'+(tx.side==="buy"?"BUY":"SELL")+'</span>'
+        +'<span>'+tx.sol+' SOL</span>'
+        +'<span>'+Number(tx.tokens).toLocaleString()+' tok</span>'
+        +'<span class="w">'+esc(tx.wallet)+' · '+ago(tx.ts)+'</span></div>';
+    }).join("");
+  }
+  function loadMarket(t){
+    var cached=marketCache[t.id];
+    if(cached&&Date.now()-cached.at<20000){drawPriceChart(t,cached.d.series);renderTx(cached.d.trades);return}
+    fetch("/api/trades/"+encodeURIComponent(t.id)).then(function(r){return r.ok?r.json():null}).then(function(d){
+      if(!d)return;
+      marketCache[t.id]={d:d,at:Date.now()};
+      if(openTokenId===t.id){drawPriceChart(t,d.series);renderTx(d.trades)}
+    }).catch(function(){});
+    if(cached){drawPriceChart(t,cached.d.series);renderTx(cached.d.trades)}
+  }
+  function openToken(id){
+    var t=S.tokens.find(function(x){return x.id===id});
+    if(!t)return;
+    openTokenId=id;
+    var pv=$("tpPfp");
+    if(t.pfp){
+      if(pv.tagName!=="IMG"){var img=document.createElement("img");img.className="pfp big";img.id="tpPfp";img.alt="";pv.replaceWith(img);pv=img}
+      pv.src="/api/pfp/"+encodeURIComponent(t.id);
+    }else{
+      if(pv.tagName==="IMG"){var sp=document.createElement("span");sp.className="pfp big ph";sp.id="tpPfp";pv.replaceWith(sp);pv=sp}
+      pv.textContent=(t.symbol||"$?").charAt(1);
+    }
+    pv.style.borderColor=t.color;
+    $("tpSym").textContent=t.symbol;
+    $("tpName").textContent=t.name||"";
+    $("tpTag").textContent=t.tagline||"";
+    $("tpLore").textContent=t.lore||"";
+    $("tpReward").innerHTML='REWARDS: <b>'+esc(REWARD_LABEL[t.reward]||"DIVIDEND")+'</b> — '+esc(REWARD_DESC[t.reward]||"")+' · holder pool <b>'+(+t.rewardPoolSol||0)+' SOL</b> (simulated until on-chain)';
+    $("tpStats").innerHTML=tokStats(t);
+    $("tpBar").style.width=t.curvePct+"%";
+    $("tpMint").innerHTML=t.onchain
+      ?'MINT <a href="'+esc(t.onchain.explorer)+'" target="_blank" rel="noopener">'+esc(t.onchain.mint.slice(0,4)+"…"+t.onchain.mint.slice(-4))+' ↗</a>'
+        +(t.onchain.tradeUrl?' &nbsp; <a class="tradelink" href="'+esc(t.onchain.tradeUrl)+'" target="_blank" rel="noopener"><b>TRADE ON RAYDIUM ↗</b></a>':'')
+        +(t.live?' <span class="tp-note">· live on-chain curve</span>':'')
+      :'<span style="color:var(--dim)">mint: simulated curve'+(t.graduated?' · graduated':'')+'</span>';
+    $("tpFoot").textContent="LAUNCHED "+ago(t.shippedAt).toUpperCase()+" · TARGET "+t.curveTargetSol+" SOL · BUILT BY THE CREW";
+    $("tpShareNote").textContent="";
+    loadMarket(t);
+    var tradeOn=!!(t.onchain&&t.onchain.tradeUrl);
+    $("tpTrade").hidden=!tradeOn;
+    $("tpTrade").dataset.mint=tradeOn?t.onchain.mint:"";
+    $("tokPage").hidden=false;
+    emitMods("token-open",t);
+    if(location.hash!=="#t-"+id){try{location.hash="t-"+id}catch(e){}}
+  }
+  function closeToken(){
+    openTokenId=null;
+    $("tokPage").hidden=true;
+    if(location.hash.indexOf("#t-")===0){try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}}
+  }
+  $("tpClose").addEventListener("click",closeToken);
+  $("tokPage").addEventListener("click",function(e){if(e.target===this)closeToken()});
+  document.addEventListener("keydown",function(e){if(e.key==="Escape"&&openTokenId)closeToken()});
+  $("tokens").addEventListener("click",function(e){
+    if(e.target.closest("a"))return;
+    var card=e.target.closest("[data-tid]");
+    if(card)openToken(card.getAttribute("data-tid"));
+  });
+  $("tpShare").addEventListener("click",function(){
+    var url=location.origin+location.pathname+"#t-"+openTokenId;
+    var done=function(){$("tpShareNote").textContent="copied"};
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(url).then(done).catch(function(){$("tpShareNote").textContent=url});
+    else $("tpShareNote").textContent=url;
+  });
+  /* ---------- Phantom trading (user signs; server only builds the tx) ---------- */
+  var twWallet=null;
+  function twProvider(){
+    var p=(window.phantom&&window.phantom.solana)||window.solana;
+    return (p&&p.isPhantom)?p:null;
+  }
+  function twSetNote(msg,err){var n=$("twNote");n.textContent=msg;n.className="trade-note"+(err?" err":"")}
+  $("twConnect").addEventListener("click",async function(){
+    var p=twProvider();
+    if(!p){twSetNote("Phantom not detected — install the Phantom extension, or use the TRADE ON RAYDIUM link below.",true);return}
+    try{
+      var r=await p.connect();
+      twWallet=r.publicKey.toString();
+      $("twAddr").textContent=twWallet.slice(0,4)+"…"+twWallet.slice(-4);
+      $("twConnect").textContent="CONNECTED";
+      twSetNote("you sign in Phantom — Autopad never holds your keys or funds.");
+    }catch(e){twSetNote("connection cancelled.",true)}
+  });
+  async function twTrade(side){
+    var mint=$("tpTrade").dataset.mint;
+    if(!mint)return;
+    if(!twWallet){twSetNote("connect Phantom first.",true);return}
+    var amt=parseFloat(side==="buy"?$("twBuyAmt").value:$("twSellAmt").value);
+    if(!(amt>0)){twSetNote("enter an amount.",true);return}
+    var p=twProvider();
+    if(!p||typeof solanaWeb3==="undefined"){twSetNote("wallet libraries unavailable in this browser.",true);return}
+    twSetNote("building transaction…");
+    try{
+      var r=await fetch("/api/trade/build",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({mint:mint,side:side,amount:amt,owner:twWallet})});
+      var j=await r.json();
+      if(!r.ok){twSetNote(j.error||"couldn't build the trade.",true);return}
+      var raw=Uint8Array.from(atob(j.tx),function(c){return c.charCodeAt(0)});
+      var tx=solanaWeb3.VersionedTransaction.deserialize(raw);
+      twSetNote("confirm in Phantom…");
+      var sent=await p.signAndSendTransaction(tx);
+      var sig=sent&&(sent.signature||sent);
+      twSetNote((side==="buy"?"bought":"sold")+" — tx "+String(sig).slice(0,8)+"… confirmed on your wallet's side.");
+      pushTick((side==="buy"?"curve buy":"curve sell")+" on "+($("tpSym").textContent||""));
+    }catch(e){
+      twSetNote(String(e&&e.message||e).indexOf("User rejected")>=0?"cancelled in Phantom.":"trade failed: "+String(e&&e.message||e).slice(0,100),true);
+    }
+  }
+  $("twBuy").addEventListener("click",function(){twTrade("buy")});
+  $("twSell").addEventListener("click",function(){twTrade("sell")});
+
+  /* ---------- creator-pays launch from the Launch tab ---------- */
+  $("lfWalletLaunch").addEventListener("click",async function(){
+    var n=$("launchNote");
+    var setN=function(m,err){n.textContent=m;n.className="mode-note"+(err?" err":"")};
+    var name=$("lfName").value.trim(), tick=$("lfTicker").value.trim();
+    if(name.length<2||!/^\$?[A-Za-z][A-Za-z0-9]{1,9}$/.test(tick)){setN("fill in a name and a valid ticker first.",true);return}
+    var p=twProvider();
+    if(!p){setN("Phantom not detected — install the Phantom extension to launch from your wallet.",true);return}
+    try{
+      var conn=await p.connect();
+      var owner=conn.publicKey.toString();
+      setN("building your launch transaction…");
+      var body={name:name,ticker:tick,tagline:$("lfTag").value.trim(),color:lfColor,reward:lfReward,pfp:lfPfpData,owner:owner,buySol:parseFloat($("lfBuySol").value)||0};
+      var r=await fetch("/api/launch/build",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+      var j=await r.json();
+      if(!r.ok){setN(j.error||"couldn't build the launch.",true);return}
+      if(typeof solanaWeb3==="undefined"){setN("wallet libraries unavailable in this browser.",true);return}
+      setN("confirm in Phantom — you pay the launch fee, the token is yours…");
+      for(var i=0;i<j.txs.length;i++){
+        var raw=Uint8Array.from(atob(j.txs[i]),function(c){return c.charCodeAt(0)});
+        var tx=solanaWeb3.VersionedTransaction.deserialize(raw);
+        await p.signAndSendTransaction(tx);
+      }
+      setN("sent — waiting for the pool to appear on-chain…");
+      var launched=false;
+      for(var k=0;k<20&&!launched;k++){
+        await new Promise(function(res){setTimeout(res,2500)});
+        try{
+          var cr=await fetch("/api/launch/confirm",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:j.id})});
+          var cj=await cr.json();
+          launched=!!cj.launched;
+        }catch(e){}
+      }
+      if(launched){
+        setN("LAUNCHED — "+tick.toUpperCase()+" is live on the curve. Opening its page…");
+        myVotes[j.id]=1;saveMyVotes();
+        await poll();
+        openToken(j.id);
+        this.closest("form").reset();lfPfpData=null;lfReward="dividend";lfColor="#8a3ffc";$("lfPfpClear").hidden=true;lfPreviewUpdate();
+      }else{
+        setN("transaction sent but the pool isn't visible yet — it may still confirm; check back in a minute.",true);
+      }
+    }catch(e){
+      var msg=String(e&&e.message||e);
+      setN(msg.indexOf("User rejected")>=0?"cancelled in Phantom.":"launch failed: "+msg.slice(0,120),true);
+    }
+  });
+
+  function maybeOpenFromHash(){
+    if(location.hash.indexOf("#t-")===0){
+      var id=location.hash.slice(3);
+      if(S.tokens.some(function(t){return t.id===id}))openToken(id);
+    }
+  }
+  addEventListener("hashchange",maybeOpenFromHash);
+
+  /* fetch each applet's code once and run it in a locked sandbox */
+  var appletCache={};
+  var APPLET_HEAD='<!doctype html><html><head><meta charset="utf-8">'
+    +'<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'unsafe-inline\'; style-src \'unsafe-inline\'; img-src data: blob:; media-src data: blob:">'
+    +'<meta name="viewport" content="width=device-width,initial-scale=1">'
+    +'<style>body{margin:10px;background:#fff;color:#141512;font:13px/1.5 "IBM Plex Mono",monospace}</style></head><body>';
+  function hydrateApplets(){
+    document.querySelectorAll("iframe.applet").forEach(function(f){
+      var id=f.getAttribute("data-applet");
+      if(f.dataset.done)return;
+      f.dataset.done="1";
+      f.addEventListener("load",function(){sendAppletData(f)});
+      var set=function(code){f.srcdoc=APPLET_HEAD+code+"</body></html>"};
+      if(appletCache[id])return set(appletCache[id]);
+      fetch("/api/applet/"+encodeURIComponent(id)).then(function(r){return r.ok?r.text():""}).then(function(code){
+        if(code){appletCache[id]=code;set(code)}
+      }).catch(function(){});
+    });
+  }
+  /* ---------- site mods: voted code applied to this live page ---------- */
+  var appliedMods={}, modsRevSeen=-1, modsSyncing=false, lastAppliedModId=null;
+
+  /* guardian: core UI that no mod may remove or hide */
+  var CORE=["#launchForm","#sugInput","#feed","#buildSlot","#tokens","nav",".composer"];
+  function coreIntact(){
+    for(var i=0;i<CORE.length;i++){
+      var el=document.querySelector(CORE[i]);
+      if(!el)return CORE[i];
+      var part=el.closest?el.closest(".part"):null;
+      if(part&&!part.classList.contains("built"))continue; // still under construction
+      if(getComputedStyle(el).display==="none")return CORE[i];
+    }
+    return null;
+  }
+  function runMod(m){
+    if(appliedMods[m.id])return;
+    appliedMods[m.id]=true;
+    lastAppliedModId=m.id;
+    var styleEl=null;
+    try{
+      if(m.css){styleEl=document.createElement("style");styleEl.setAttribute("data-mod",m.id);styleEl.textContent=m.css;(document.head||document.body).appendChild(styleEl)}
+      if(m.js){(new Function("AUTOPAD",m.js))(window.AUTOPAD)}
+      var broke=coreIntact();
+      if(broke){
+        if(styleEl)styleEl.remove(); // undo its CSS immediately
+        reportModError(m.id,"broke core UI: "+broke,"core",true);
+      }
+    }catch(e){
+      reportModError(m.id,e,"crash",false);
+    }
+  }
+  function reportModError(id,e,severity,reloadIfDisabled){
+    try{console.error("[mod "+id+"]",e)}catch(x){}
+    try{
+      fetch("/api/mod-error",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,voterId:voterId,severity:severity||"crash"})})
+        .then(function(r){return r.json()}).then(function(j){
+          if(reloadIfDisabled&&j&&j.disabled&&coreIntact()){location.reload()}
+        }).catch(function(){});
+    }catch(x){}
+  }
+  /* ongoing watch: catches mods that sabotage core UI later via timers */
+  setInterval(function(){
+    var broke=coreIntact();
+    if(broke&&lastAppliedModId){
+      reportModError(lastAppliedModId,"core UI missing later: "+broke,"core",true);
+    }
+  },20000);
+  function syncMods(){
+    var rev=S.config.modsRev||0;
+    if(rev===modsRevSeen||modsSyncing)return;
+    modsSyncing=true;
+    fetch("/api/mods").then(function(r){return r.json()}).then(function(d){
+      modsRevSeen=d.rev||rev;
+      (d.mods||[]).forEach(runMod);
+      emitMods("state",S); // let fresh mods render immediately
+      modsSyncing=false;
+    }).catch(function(){modsSyncing=false});
+  }
+
+  /* one-way live data feed into sandboxed applets (nothing comes back out) */
+  function appletSnapshot(){
+    return {type:"autopad-data",
+      tokens:S.tokens.map(function(t){return {id:t.id,symbol:t.symbol,name:t.name,tagline:t.tagline,color:t.color,curvePct:t.curvePct,solRaised:t.solRaised,curveTargetSol:t.curveTargetSol,holders:t.holders,graduated:t.graduated,shippedAt:t.shippedAt,reward:t.reward,rewardPoolSol:t.rewardPoolSol}}),
+      site:S.site, solPriceUsd:S.config.solPriceUsd||null, minVotes:S.config.minVotes||5};
+  }
+  function sendAppletData(f){try{f.contentWindow&&f.contentWindow.postMessage(appletSnapshot(),"*")}catch(e){}}
+  function broadcastToApplets(){document.querySelectorAll("iframe.applet").forEach(sendAppletData)}
+
+  function renderTicker(){
+    var items=S.log.length?S.log.map(function(l){return l.msg}):["autopad online","crew on shift: 5","suggestion feed open"];
+    if(S.site.tickerMessage)items=[S.site.tickerMessage].concat(items);
+    var row=items.map(function(t){return "<b>»</b> "+esc(t)+" &nbsp;&nbsp;&nbsp;"}).join("");
+    $("ticker").innerHTML=row+row;
+  }
+
+  function renderFees(){
+    var split=(S.site.feeSplit||"50/30/20").split("/").map(Number);
+    var pct=S.site.feePct!=null?S.site.feePct:1;
+    $("feeA").style.flex=split[0];$("feeA").textContent=split[0]+"% BUILD CREW";
+    $("feeB").style.flex=split[1];$("feeB").textContent=split[1]+"% LP";
+    $("feeC").style.flex=split[2];$("feeC").textContent=split[2]+"% BURN";
+    $("feeNote").firstElementChild.textContent=pct+"% fee on every curve trade.";
+  }
+
+  function renderChain(c){
+    var b=$("chainBadge"),f=$("chainFoot");
+    if(!c){return}
+    b.classList.remove("chain-on","chain-off");
+    if(c.connected){
+      b.classList.add("chain-on");
+      b.textContent="MAINNET · SLOT "+Number(c.slot).toLocaleString();
+      f.textContent="chain: connected to Solana "+esc(c.cluster)+" via "+(c.provider==="helius"?"Helius RPC":"custom RPC")
+        +" · launches "+(c.launch&&c.launch.armed?"ARMED":"disarmed (simulated curve) — program pending");
+    }else if(c.configured){
+      b.classList.add("chain-off");
+      b.textContent="MAINNET · RECONNECTING";
+      f.textContent="chain: RPC configured, reconnecting…";
+    }else{
+      b.classList.add("chain-off");
+      b.textContent="SOLANA · RPC NOT SET";
+      f.textContent="chain: no RPC configured — set HELIUS_API_KEY on the server to go on-chain-ready.";
+    }
+  }
+
+  function renderAll(){renderFeed();renderBuild();renderPad();renderZone();renderTicker();sizeLayer()}
+
+  /* ---------- API ---------- */
+  var note=$("modeNote");
+  function setNote(msg,err){note.textContent=msg;note.className="mode-note"+(err?" err":"")}
+
+  async function poll(){
+    try{
+      var r=await fetch("/api/state");
+      if(!r.ok)throw new Error("HTTP "+r.status);
+      var next=await r.json();
+      // detect freshly shipped modules/tokens -> send an agent to construct them
+      if(!firstPoll){
+        (next.modules||[]).forEach(function(m){
+          if(!(m.id in knownModules)){knownModules[m.id]="pending";pendingBuilds.push({type:"mod",id:m.id})}
+        });
+        (next.tokens||[]).forEach(function(t){
+          if(!(t.id in knownTokens)){knownTokens[t.id]="pending";pendingBuilds.push({type:"tok",id:t.id})}
+        });
+      }else{
+        (next.modules||[]).forEach(function(m){knownModules[m.id]="built"});
+        (next.tokens||[]).forEach(function(t){knownTokens[t.id]="built"});
+      }
+      S=next;firstPoll=false;
+      $("aiBadge").hidden=!S.config.claude;
+      if(S.config.claude)$("aiBadge").textContent="DESIGNER: CLAUDE";
+      renderChain(S.chain);
+      setNote(S.config.claude
+        ?"live shared feed — winning builds are designed by Claude ("+S.config.model+")."
+        :"live shared feed — mock designer running. Set ANTHROPIC_API_KEY on the server to let Claude design builds.");
+      $("launchVotesNote").textContent=(S.config.minVotes||5)+" net upvotes and the crew builds it.";
+      $("feedSub").textContent="tell the agents what to build. $TICKER = token proposal. "+(S.config.minVotes||5)+" net upvotes to enter the queue — highest votes build first.";
+      if(S.site.heroTagline)$("heroTagline").textContent=S.site.heroTagline;
+      $("feeDefaultReward").textContent=(REWARD_LABEL[S.site.defaultReward]||"DIVIDEND").toLowerCase();
+      renderFees();
+      if(S.config.version)$("verFoot").textContent="· v"+S.config.version;
+      if(firstData){firstData=false;maybeOpenFromHash()}
+      if(openTokenId){var ot=S.tokens.find(function(x){return x.id===openTokenId});if(ot){$("tpStats").innerHTML=tokStats(ot);$("tpBar").style.width=ot.curvePct+"%";loadMarket(ot)}}
+      broadcastToApplets();
+      syncMods();
+      emitMods("state",S);
+      renderAll();
+    }catch(e){
+      setNote("can't reach the site server — retrying…",true);
+    }
+  }
+  poll();setInterval(poll,2500);
+
+  $("feed").addEventListener("click",async function(e){
+    var b=e.target.closest("button[data-id]");
+    if(!b)return;
+    var id=b.getAttribute("data-id"),dir=parseInt(b.getAttribute("data-v"),10);
+    var next=(myVotes[id]===dir)?0:dir;
+    if(next===0)delete myVotes[id];else myVotes[id]=next;
+    saveMyVotes();
+    // optimistic
+    var s=S.suggestions.find(function(x){return x.id===id});
+    if(s)s.score+= (next - ((myVotes[id]===next?0:0))); // server poll corrects shortly
+    renderFeed();
+    try{await fetch("/api/vote",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:id,dir:next,voterId:voterId})})}catch(err){}
+    poll();
+  });
+
+  $("composer").addEventListener("submit",async function(e){
+    e.preventDefault();
+    var inp=$("sugInput"),t=inp.value.trim();
+    if(t.length<3)return;
+    inp.value="";
+    try{localStorage.removeItem("autopad-draft")}catch(err){}
+    try{
+      var r=await fetch("/api/suggest",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:t,voterId:voterId})});
+      var j=await r.json();
+      if(!r.ok)setNote(j.error||"couldn't post",true);
+      else{myVotes[j.id]=1;saveMyVotes();dispatchJob("feed")}
+    }catch(err){setNote("couldn't reach server to post",true)}
+    poll();
+  });
+  $("sugInput").addEventListener("input",function(){try{localStorage.setItem("autopad-draft",this.value)}catch(e){}});
+  try{var d0=localStorage.getItem("autopad-draft");if(d0)$("sugInput").value=d0}catch(e){}
+
+  $("launchBtn").addEventListener("click",function(){
+    document.getElementById("launchTop").scrollIntoView({behavior:reduced?"auto":"smooth"});
+    setTimeout(function(){$("lfName").focus()},reduced?0:450);
+  });
+
+  /* ---------- launch tab ---------- */
+  var lfColor="#8a3ffc", lfPfpData=null, lfReward="dividend";
+  $("lfRewards").addEventListener("click",function(e){
+    var b=e.target.closest("button[data-r]");if(!b)return;
+    lfReward=b.getAttribute("data-r");
+    this.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
+    $("lfRewardHint").textContent=REWARD_DESC[lfReward];
+  });
+  function lfPreviewUpdate(){
+    var tick=("$"+$("lfTicker").value.replace(/^\$/,"")).toUpperCase();
+    var tickOk=/^\$[A-Z][A-Z0-9]{1,9}$/.test(tick);
+    $("pvSym").textContent=tickOk?tick:"$TICKER";
+    $("pvName").textContent=$("lfName").value.trim()||"Your token";
+    $("pvTag").textContent=$("lfTag").value.trim()||"your tagline here";
+    $("pvTarget").textContent=$("lfCurve").value;
+    $("lfCurveVal").textContent=$("lfCurve").value+" SOL";
+    $("lfPreview").style.borderLeftColor=lfColor;
+    var pv=$("pvPfp");
+    pv.style.borderColor=lfColor;
+    if(lfPfpData){
+      if(pv.tagName!=="IMG"){var img=document.createElement("img");img.className="pfp";img.id="pvPfp";img.alt="";pv.replaceWith(img);pv=img}
+      pv.src=lfPfpData;pv.style.borderColor=lfColor;
+    }else{
+      if(pv.tagName==="IMG"){var sp=document.createElement("span");sp.className="pfp ph";sp.id="pvPfp";pv.replaceWith(sp);pv=sp;pv.style.borderColor=lfColor}
+      pv.textContent=(tickOk?tick.charAt(1):($("lfName").value.trim().charAt(0)||"?")).toUpperCase();
+    }
+  }
+  $("lfPfp").addEventListener("change",function(){
+    var file=this.files&&this.files[0];
+    if(!file)return;
+    var img=new Image();
+    img.onload=function(){
+      var c=document.createElement("canvas");c.width=96;c.height=96;
+      var x=c.getContext("2d");
+      var s=Math.min(img.width,img.height);
+      x.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,96,96);
+      var d=c.toDataURL("image/png");
+      if(d.length>38000)d=c.toDataURL("image/jpeg",0.82);
+      if(d.length>38000){$("launchNote").className="mode-note err";$("launchNote").textContent="image too complex — try a simpler one";return}
+      lfPfpData=d;$("lfPfpClear").hidden=false;lfPreviewUpdate();
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror=function(){$("launchNote").className="mode-note err";$("launchNote").textContent="couldn't read that image"};
+    img.src=URL.createObjectURL(file);
+  });
+  $("lfPfpClear").addEventListener("click",function(){
+    lfPfpData=null;$("lfPfp").value="";this.hidden=true;lfPreviewUpdate();
+  });
+  ["lfName","lfTicker","lfTag","lfCurve"].forEach(function(id){$(id).addEventListener("input",lfPreviewUpdate)});
+  $("lfSwatches").addEventListener("click",function(e){
+    var b=e.target.closest("button[data-c]");if(!b)return;
+    lfColor=b.getAttribute("data-c");
+    this.querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x===b)});
+    lfPreviewUpdate();
+  });
+  $("launchForm").addEventListener("submit",async function(e){
+    e.preventDefault();
+    var body={
+      name:$("lfName").value.trim(),
+      ticker:$("lfTicker").value.trim(),
+      tagline:$("lfTag").value.trim(),
+      color:lfColor,
+      curveTargetSol:parseInt($("lfCurve").value,10),
+      reward:lfReward,
+      pfp:lfPfpData,
+      voterId:voterId
+    };
+    var n=$("launchNote");
+    try{
+      var r=await fetch("/api/launch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+      var j=await r.json();
+      if(!r.ok){n.className="mode-note err";n.textContent=j.error||"couldn't submit";return}
+      myVotes[j.id]=1;saveMyVotes();
+      n.className="mode-note";
+      n.textContent="Submitted — it's in the feed with your upvote. "+(S.config.minVotes||5)+" net votes and the crew builds it.";
+      this.reset();lfColor="#8a3ffc";lfPfpData=null;lfReward="dividend";$("lfPfpClear").hidden=true;
+      $("lfRewards").querySelectorAll("button").forEach(function(x){x.classList.toggle("on",x.getAttribute("data-r")==="dividend")});
+      $("lfRewardHint").textContent=REWARD_DESC.dividend;lfPreviewUpdate();
+      dispatchJob("feed");
+      document.getElementById("feedTop").scrollIntoView({behavior:reduced?"auto":"smooth"});
+    }catch(err){n.className="mode-note err";n.textContent="couldn't reach the server"}
+    poll();
+  });
+
+  /* ================= AGENT CONSTRUCTION CREW ================= */
+  var layer=$("agentLayer");
+  function sizeLayer(){layer.style.height=document.documentElement.scrollHeight+"px"}
+  sizeLayer();addEventListener("resize",sizeLayer);
+
+  var PALETTES=["#8a3ffc","#0b9e68","#d6454c","#2b6fd6","#c79a1b","#141512"];
+  function agentSVG(i){
+    var c=PALETTES[i%PALETTES.length];
+    return '<svg class="sprite" viewBox="0 0 13 21" xmlns="http://www.w3.org/2000/svg">'
+      +'<rect x="3" y="0" width="7" height="3" fill="#f4c21a"/>'
+      +'<rect x="1" y="2" width="11" height="1.6" fill="#d9a40c"/>'
+      +'<rect x="3" y="3.6" width="7" height="4.4" fill="#141512"/>'
+      +'<rect x="4" y="5" width="2" height="1.8" fill="#fff"/>'
+      +'<rect x="8" y="5" width="1" height="1.8" fill="#fff"/>'
+      +'<rect x="2" y="8" width="9" height="7" fill="'+c+'"/>'
+      +'<rect x="2" y="9" width="9" height="1.4" fill="#f4c21a"/>'
+      +'<rect x="0" y="9" width="2" height="4" fill="'+c+'"/>'
+      +'<rect x="11" y="9" width="2" height="4" fill="'+c+'"/>'
+      +'<rect class="legA" x="3" y="15" width="3" height="6" fill="#141512"/>'
+      +'<rect class="legB" x="7" y="15" width="3" height="6" fill="#141512"/>'
+      +'</svg>'
+      +'<svg class="hammer" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">'
+      +'<rect x="2" y="9" width="10" height="2.4" fill="#8a5a2b" transform="rotate(-45 8 8)"/>'
+      +'<rect x="9" y="1" width="6" height="5" fill="#141512" transform="rotate(-45 8 8)"/>'
+      +'</svg>';
+  }
+  var IDLE=["gm","counting votes…","white space is free real estate","queue looks spicy","measuring twice","inspection passed","raydium pool warm","needs more pixels"];
+  var agents=[];
+  for(var i=0;i<5;i++){
+    var ael=document.createElement("div");
+    ael.className="agent walking";
+    ael.innerHTML='<div class="bub"></div>'+agentSVG(i);
+    layer.appendChild(ael);
+    agents.push({el:ael,bub:ael.querySelector(".bub"),
+      x:(0.15+0.17*i)*innerWidth,y:innerHeight*0.55+((i%3)-1)*40,
+      tx:null,ty:null,dir:1,speed:110+Math.random()*50,
+      mode:"roam",task:null,hammerT:0,say:-i*2,pause:0});
+  }
+
+  function spawnSparks(x,y){
+    if(reduced)return;
+    for(var k=0;k<6;k++){
+      var s=document.createElement("div");
+      s.className="spark"+(k%2?" s2":"");
+      s.style.left=x+"px";s.style.top=y+"px";
+      s.style.setProperty("--dx",(Math.random()*44-22)+"px");
+      s.style.setProperty("--dy",(-(10+Math.random()*34))+"px");
+      layer.appendChild(s);
+      setTimeout(function(n){return function(){n.remove()}}(s),650);
+    }
+    var c=document.createElement("div");
+    c.className="clank";c.textContent=["TAK","CLANK","TOK","BAM"][Math.floor(Math.random()*4)];
+    c.style.left=(x-6)+"px";c.style.top=(y-26)+"px";
+    layer.appendChild(c);
+    setTimeout(function(){c.remove()},720);
+  }
+
+  function targetForEl(el,corner){
+    if(!el)return null;
+    var r=el.getBoundingClientRect();
+    var left=r.left+scrollX, top=r.top+scrollY;
+    var x=corner==="right"?left+r.width-40:left+Math.min(60,Math.max(10,r.width*0.15));
+    return {x:Math.max(8,x), y:top+r.height-2};
+  }
+  function targetFor(elId,corner){return targetForEl(document.getElementById(elId),corner)}
+
+  /* ---- static construction sequence ---- */
+  var PARTS=[
+    {id:"p-nav",label:"bolting on the nav bar"},
+    {id:"p-h1",label:"raising the headline"},
+    {id:"p-hp",label:"plastering the pitch"},
+    {id:"p-cta",label:"wiring the LAUNCH button"},
+    {id:"p-ticker",label:"threading the ticker"},
+    {id:"p-launch",label:"fitting the launch tab"},
+    {id:"p-feed",label:"framing the suggestion feed"},
+    {id:"p-queue",label:"pouring the build queue"},
+    {id:"p-pad",label:"erecting the launchpad"},
+    {id:"p-zone",label:"clearing the build zone"},
+    {id:"p-fees",label:"installing the fee structure"},
+    {id:"p-how",label:"screwing in the manual"},
+    {id:"p-foot",label:"sweeping up"}
+  ];
+  var taskQueue=PARTS.slice();
+  var phase="construct";
+  var seen=false;
+  try{seen=!!localStorage.getItem("autopad-built")}catch(e){}
+  var HAMMER_T=seen?1.0:2.1;
+
+  function revealAll(){
+    PARTS.forEach(function(p){var el=document.getElementById(p.id);if(el){el.classList.remove("pending","scaffold");el.classList.add("built")}});
+    taskQueue=[];
+    agents.forEach(function(a){if(a.mode==="build"){a.mode="roam";a.task=null;a.el.classList.remove("hammering")}});
+    endConstruct();
+  }
+  function endConstruct(){
+    phase="live";
+    $("siteStatus").classList.add("gone");
+    var sk=$("skipBtn");if(sk)sk.remove();
+    try{localStorage.setItem("autopad-built","1")}catch(e){}
+    sizeLayer();
+  }
+  $("skipBtn").addEventListener("click",revealAll);
+  if(reduced)revealAll();
+
+  function finishPart(p){
+    var el=document.getElementById(p.id);
+    if(el){el.classList.remove("scaffold","pending");el.classList.add("built")}
+    sizeLayer();
+  }
+
+  function assignTasks(){
+    if(phase!=="construct"){assignDynamic();return}
+    agents.forEach(function(a){
+      if(a.mode!=="build"&&taskQueue.length){
+        var p=taskQueue.shift();
+        var el=document.getElementById(p.id);
+        el.classList.remove("pending");el.classList.add("scaffold");
+        sizeLayer();
+        var t=targetFor(p.id,Math.random()<0.5?"left":"right");
+        if(!t){finishPart(p);return}
+        a.mode="build";a.task=p;a.tx=t.x;a.ty=t.y;a.hammerT=HAMMER_T;
+        a.bub.textContent=p.label;a.bub.classList.add("show");a.say=4;
+      }
+    });
+    if(!taskQueue.length&&!agents.some(function(a){return a.mode==="build"})&&phase==="construct"){
+      endConstruct();
+      agents.forEach(function(a,ix){a.bub.textContent=["done.","ship it","next job?","inspection passed","clocking… never"][ix%5];a.bub.classList.add("show");a.say=3});
+    }
+  }
+
+  /* ---- dynamic: construct freshly shipped modules/tokens ---- */
+  function assignDynamic(){
+    if(!pendingBuilds.length)return;
+    var free=agents.filter(function(a){return a.mode==="roam"});
+    if(!free.length)return;
+    var job=pendingBuilds.shift();
+    var sel=job.type==="mod"?'[data-mid="'+job.id+'"]':'[data-tid="'+job.id+'"]';
+    var el=document.querySelector(sel);
+    if(!el){ (job.type==="mod"?knownModules:knownTokens)[job.id]="built"; return }
+    el.classList.remove("built","pending");el.classList.add("part","scaffold");
+    var t=targetForEl(el,"left");
+    var a=free[Math.floor(Math.random()*free.length)];
+    a.mode="build";a.tx=t.x;a.ty=t.y;a.hammerT=2.0;
+    a.task={dynamic:job};
+    a.bub.textContent=job.type==="tok"?"installing token…":"installing module…";
+    a.bub.classList.add("show");a.say=4;
+  }
+  function finishDynamic(job){
+    (job.type==="mod"?knownModules:knownTokens)[job.id]="built";
+    var sel=job.type==="mod"?'[data-mid="'+job.id+'"]':'[data-tid="'+job.id+'"]';
+    var el=document.querySelector(sel);
+    if(el){el.classList.remove("scaffold");el.classList.add("built")}
+    sizeLayer();
+  }
+
+  function dispatchJob(where){
+    if(phase!=="live")return;
+    var map={feed:"p-feed",queue:"buildAnchor",pad:"p-pad",fees:"p-fees"};
+    var free=agents.filter(function(a){return a.mode==="roam"});
+    if(!free.length)return;
+    var a=free[Math.floor(Math.random()*free.length)];
+    var t=targetFor(map[where]||"p-feed","left");
+    if(!t)return;
+    a.mode="job";a.tx=t.x;a.ty=t.y;a.hammerT=1.3;
+    a.bub.textContent={feed:"reading the feed…",queue:"on it, boss",pad:"polishing curves…",fees:"burning fees…"}[where]||"working…";
+    a.bub.classList.add("show");a.say=3;
+  }
+
+  /* ---- animation loop ---- */
+  var lastT=performance.now(), delay=0.6;
+  function animate(t){
+    var dt=Math.min(80,t-lastT)/1000;lastT=t;
+    delay-=dt;
+    if(delay<=0){assignTasks();delay=0.2}
+    var W=document.documentElement.clientWidth;
+    var H=document.documentElement.scrollHeight;
+    agents.forEach(function(a){
+      var working=(a.mode==="build"||a.mode==="job");
+      if(working&&a.tx!=null){
+        var dx=a.tx-a.x, dy=(a.ty-42)-a.y, dist=Math.hypot(dx,dy);
+        if(dist>6){
+          a.el.classList.add("walking");a.el.classList.remove("hammering");
+          a.x+=dx/dist*a.speed*dt; a.y+=dy/dist*a.speed*dt;
+          a.dir=dx<0?-1:1;
+        }else{
+          a.el.classList.remove("walking");a.el.classList.add("hammering");
+          a.hammerT-=dt;
+          if(Math.random()<0.12)spawnSparks(a.x+22,a.y+26);
+          if(a.hammerT<=0){
+            a.el.classList.remove("hammering");
+            if(a.mode==="build"&&a.task){
+              if(a.task.dynamic)finishDynamic(a.task.dynamic);
+              else finishPart(a.task);
+            }
+            a.mode="roam";a.task=null;a.tx=null;a.pause=0.4;
+          }
+        }
+      }else{
+        if(a.pause>0){a.pause-=dt;a.el.classList.remove("walking")}
+        else{
+          a.el.classList.add("walking");
+          if(a.tx==null||Math.hypot(a.tx-a.x,a.ty-a.y)<10){
+            a.tx=20+Math.random()*(W-60);
+            a.ty=60+Math.random()*Math.max(120,H-160);
+            if(Math.random()<0.3)a.pause=1+Math.random()*2;
+          }
+          var dx2=a.tx-a.x, dy2=a.ty-a.y, d2=Math.hypot(dx2,dy2)||1;
+          var sp=a.speed*0.45;
+          a.x+=dx2/d2*sp*dt; a.y+=dy2/d2*sp*dt;
+          a.dir=dx2<0?-1:1;
+        }
+        a.say-=dt;
+        if(a.say<=-5&&Math.random()<0.008){
+          var building=S.suggestions.find(function(s){return s.status==="building"});
+          var lines=IDLE.slice();
+          if(building)lines.push("building: "+building.text.slice(0,24)+"…");
+          a.bub.textContent=lines[Math.floor(Math.random()*lines.length)];
+          a.bub.classList.add("show");a.say=3;
+        }
+      }
+      if(a.say<=0)a.bub.classList.remove("show");
+      a.x=Math.min(W-30,Math.max(4,a.x));
+      a.y=Math.min(H-50,Math.max(4,a.y));
+      a.el.classList.toggle("flip",a.dir<0);
+      a.el.style.transform="translate("+a.x+"px,"+a.y+"px)";
+    });
+    requestAnimationFrame(animate);
+  }
+  if(!reduced)requestAnimationFrame(animate);
+  else agents.forEach(function(a,ix){
+    a.el.classList.remove("walking");
+    a.el.style.transform="translate("+(30+ix*120)+"px,"+(140+ix*160)+"px)";
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "name": "autopad",
+  "version": "0.1.0",
+  "description": "Autonomous community-built Solana meme launchpad \u2014 agents build what the feed votes for.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "BUILD_SECONDS=8 node server.js",
+    "chain:setup": "node scripts/chain-setup.mjs",
+    "chain:status": "node scripts/chain-status.mjs",
+    "demo": "BUILD_SECONDS=8 MIN_VOTES=1 node server.js",
+    "chain:platform": "node scripts/chain-platform.mjs",
+    "chain:claim": "node scripts/chain-claim.mjs",
+    "chain:rehearse": "node scripts/chain-rehearse.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@raydium-io/raydium-sdk-v2": "^0.2.78-alpha",
+    "@solana/spl-token": "^0.4.15",
+    "@solana/spl-token-metadata": "^0.1.6",
+    "@solana/web3.js": "^1.99.0",
+    "bn.js": "^5.2.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
+  }
+}
