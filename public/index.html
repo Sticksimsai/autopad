@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Autopad</title>
+<title>Buildpad</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap">
 <script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
 <style>
@@ -308,7 +308,7 @@ footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px so
 <button id="skipBtn" type="button">SKIP BUILD ▸</button>
 
 <nav class="part pending" id="p-nav">
-  <div class="logo">AUTOPAD<span class="dot">_</span></div>
+  <div class="logo">BUILDPAD<span class="dot">_</span></div>
   <div class="links">
     <a href="#launchTop">LAUNCH</a><a href="#feedTop">FEED</a><a href="#queueTop">QUEUE</a><a href="#padTop">LAUNCHPAD</a><a href="#zoneTop">BUILD ZONE</a><a href="#feesTop">FEES</a>
   </div>
@@ -438,7 +438,7 @@ footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px so
   <div class="step"><span class="k">04 LAUNCH</span><p>Shipped tokens open on a bonding curve. At full curve, liquidity graduates to a Raydium pool.</p></div>
 </section>
 
-<footer class="part pending" id="p-foot">Autopad — permanently under construction. Suggestions, votes and shipped modules are live and shared. Tokens, SOL figures and the Raydium graduation are simulated until the on-chain program ships.<br><span id="chainFoot">chain: checking…</span> <span id="verFoot"></span></footer>
+<footer class="part pending" id="p-foot">Buildpad — permanently under construction. Suggestions, votes and shipped modules are live and shared. Tokens, SOL figures and the Raydium graduation are simulated until the on-chain program ships.<br><span id="chainFoot">chain: checking…</span> <span id="verFoot"></span></footer>
 
 <div class="tokpage" id="tokPage" hidden>
   <div class="tokpage-inner" role="dialog" aria-modal="true" aria-label="Token page">
@@ -471,7 +471,7 @@ footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px so
         <input id="twSellAmt" inputmode="numeric" placeholder="1000000" aria-label="Sell amount in tokens"><span class="unit">TOK</span>
         <button type="button" class="tsell" id="twSell">SELL</button>
       </div>
-      <div class="trade-note" id="twNote">you sign in Phantom — Autopad never holds your keys or funds.</div>
+      <div class="trade-note" id="twNote">you sign in Phantom — Buildpad never holds your keys or funds.</div>
     </div>
     <div class="tp-links">
       <span id="tpMint"></span>
@@ -493,12 +493,12 @@ footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px so
   /* voter identity (per browser) */
   var voterId;
   try{
-    voterId=localStorage.getItem("autopad-voter");
-    if(!voterId){voterId="v_"+Math.random().toString(36).slice(2,12)+Date.now().toString(36);localStorage.setItem("autopad-voter",voterId)}
+    voterId=localStorage.getItem("buildpad-voter");
+    if(!voterId){voterId="v_"+Math.random().toString(36).slice(2,12)+Date.now().toString(36);localStorage.setItem("buildpad-voter",voterId)}
   }catch(e){voterId="v_"+Math.random().toString(36).slice(2,12)+Date.now().toString(36)}
   var myVotes={};
-  try{myVotes=JSON.parse(localStorage.getItem("autopad-myvotes")||"{}")}catch(e){}
-  function saveMyVotes(){try{localStorage.setItem("autopad-myvotes",JSON.stringify(myVotes))}catch(e){}}
+  try{myVotes=JSON.parse(localStorage.getItem("buildpad-myvotes")||"{}")}catch(e){}
+  function saveMyVotes(){try{localStorage.setItem("buildpad-myvotes",JSON.stringify(myVotes))}catch(e){}}
 
   var S={suggestions:[],tokens:[],modules:[],log:[],config:{},site:{}};
 
@@ -508,13 +508,14 @@ footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px so
     lottery:"the fee pool is raffled to one holder every epoch",
     multiplier:"dividends scale with time held; selling resets the multiplier"};
 
-  /* ---------- AUTOPAD: the stable API voted site-mods build against ---------- */
+  /* ---------- BUILDPAD: the stable API voted site-mods build against ---------- */
   var modListeners={state:[],"token-open":[]};
-  window.AUTOPAD={
+  window.BUILDPAD={
     state:function(){return S},
     on:function(evt,fn){if(modListeners[evt]&&typeof fn==="function")modListeners[evt].push(fn)},
     esc:function(s){var d=document.createElement("div");d.textContent=s==null?"":String(s);return d.innerHTML}
   };
+  window.AUTOPAD=window.BUILDPAD; // compat alias for mods built before the rename
   function emitMods(evt,payload){
     (modListeners[evt]||[]).forEach(function(fn){try{fn(payload)}catch(e){}});
   }
@@ -780,7 +781,7 @@ footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px so
       twWallet=r.publicKey.toString();
       $("twAddr").textContent=twWallet.slice(0,4)+"…"+twWallet.slice(-4);
       $("twConnect").textContent="CONNECTED";
-      twSetNote("you sign in Phantom — Autopad never holds your keys or funds.");
+      twSetNote("you sign in Phantom — Buildpad never holds your keys or funds.");
     }catch(e){twSetNote("connection cancelled.",true)}
   });
   async function twTrade(side){
@@ -908,7 +909,7 @@ footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px so
     var styleEl=null;
     try{
       if(m.css){styleEl=document.createElement("style");styleEl.setAttribute("data-mod",m.id);styleEl.textContent=m.css;(document.head||document.body).appendChild(styleEl)}
-      if(m.js){(new Function("AUTOPAD",m.js))(window.AUTOPAD)}
+      if(m.js){(new Function("BUILDPAD",m.js))(window.BUILDPAD)}
       var broke=coreIntact();
       if(broke){
         if(styleEl)styleEl.remove(); // undo its CSS immediately
@@ -948,7 +949,7 @@ footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px so
 
   /* one-way live data feed into sandboxed applets (nothing comes back out) */
   function appletSnapshot(){
-    return {type:"autopad-data",
+    return {type:"buildpad-data",
       tokens:S.tokens.map(function(t){return {id:t.id,symbol:t.symbol,name:t.name,tagline:t.tagline,color:t.color,curvePct:t.curvePct,solRaised:t.solRaised,curveTargetSol:t.curveTargetSol,holders:t.holders,graduated:t.graduated,shippedAt:t.shippedAt,reward:t.reward,rewardPoolSol:t.rewardPoolSol}}),
       site:S.site, solPriceUsd:S.config.solPriceUsd||null, minVotes:S.config.minVotes||5};
   }
@@ -956,7 +957,7 @@ footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px so
   function broadcastToApplets(){document.querySelectorAll("iframe.applet").forEach(sendAppletData)}
 
   function renderTicker(){
-    var items=S.log.length?S.log.map(function(l){return l.msg}):["autopad online","crew on shift: 5","suggestion feed open"];
+    var items=S.log.length?S.log.map(function(l){return l.msg}):["buildpad online","crew on shift: 5","suggestion feed open"];
     if(S.site.tickerMessage)items=[S.site.tickerMessage].concat(items);
     var row=items.map(function(t){return "<b>»</b> "+esc(t)+" &nbsp;&nbsp;&nbsp;"}).join("");
     $("ticker").innerHTML=row+row;
@@ -1059,7 +1060,7 @@ footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px so
     var inp=$("sugInput"),t=inp.value.trim();
     if(t.length<3)return;
     inp.value="";
-    try{localStorage.removeItem("autopad-draft")}catch(err){}
+    try{localStorage.removeItem("buildpad-draft")}catch(err){}
     try{
       var r=await fetch("/api/suggest",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:t,voterId:voterId})});
       var j=await r.json();
@@ -1068,8 +1069,8 @@ footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px so
     }catch(err){setNote("couldn't reach server to post",true)}
     poll();
   });
-  $("sugInput").addEventListener("input",function(){try{localStorage.setItem("autopad-draft",this.value)}catch(e){}});
-  try{var d0=localStorage.getItem("autopad-draft");if(d0)$("sugInput").value=d0}catch(e){}
+  $("sugInput").addEventListener("input",function(){try{localStorage.setItem("buildpad-draft",this.value)}catch(e){}});
+  try{var d0=localStorage.getItem("buildpad-draft");if(d0)$("sugInput").value=d0}catch(e){}
 
   $("launchBtn").addEventListener("click",function(){
     document.getElementById("launchTop").scrollIntoView({behavior:reduced?"auto":"smooth"});
@@ -1245,7 +1246,7 @@ footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px so
   var taskQueue=PARTS.slice();
   var phase="construct";
   var seen=false;
-  try{seen=!!localStorage.getItem("autopad-built")}catch(e){}
+  try{seen=!!localStorage.getItem("buildpad-built")}catch(e){}
   var HAMMER_T=seen?1.0:2.1;
 
   function revealAll(){
@@ -1258,7 +1259,7 @@ footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px so
     phase="live";
     $("siteStatus").classList.add("gone");
     var sk=$("skipBtn");if(sk)sk.remove();
-    try{localStorage.setItem("autopad-built","1")}catch(e){}
+    try{localStorage.setItem("buildpad-built","1")}catch(e){}
     sizeLayer();
   }
   $("skipBtn").addEventListener("click",revealAll);

@@ -167,7 +167,7 @@ async function launchViaRaydium(build, metaUri) {
   const programId = launchpadProgramId();
 
   const mintKp = Keypair.generate();
-  const name = String(build.name || build.symbol || "Autopad Token").slice(0, 32);
+  const name = String(build.name || build.symbol || "Buildpad Token").slice(0, 32);
   const symbol = String(build.symbol || "$PAD").replace(/^\$/, "").slice(0, 10);
   // metadata: the site serves each token's Metaplex JSON itself (/api/meta/:id.json)
   const uri = metaUri || process.env.TOKEN_METADATA_URI || "https://raydium.io";
@@ -359,7 +359,7 @@ export async function buildTradeTx({ ownerPubkey, mint, side, amountSol, amountT
   return { tx: Buffer.from(tx.serialize()).toString("base64"), expected, poolId: poolId.toBase58() };
 }
 
-/* ---------------- platform config: Autopad's fee share on every trade ---------- */
+/* ---------------- platform config: Buildpad's fee share on every trade ---------- */
 
 async function waitForAccount(pubkey, tries = 8, delayMs = 2000) {
   const conn = getConnection();
@@ -371,7 +371,7 @@ async function waitForAccount(pubkey, tries = 8, delayMs = 2000) {
   return false;
 }
 
-export async function createPlatform({ feeRateBps = 100, name = "Autopad", web = "", img = "" } = {}) {
+export async function createPlatform({ feeRateBps = 100, name = "Buildpad", web = "", img = "" } = {}) {
   const payer = getLauncher();
   if (!payer) throw new Error("run npm run chain:setup first");
   const conn = getConnection();
@@ -510,13 +510,13 @@ export async function launchToken(build, metaUri) {
 
   const mintKp = Keypair.generate();
   const mint = mintKp.publicKey;
-  const name = String(build.name || build.symbol || "Autopad Token").slice(0, 32);
+  const name = String(build.name || build.symbol || "Buildpad Token").slice(0, 32);
   const symbol = String(build.symbol || "$PAD").replace(/^\$/, "").slice(0, 10);
 
   const metadata = {
     mint, name, symbol,
     uri: metaUri || process.env.TOKEN_METADATA_URI || "",
-    additionalMetadata: [["builtBy", "autopad-crew"], ["reward", String(build.reward || "dividend")]]
+    additionalMetadata: [["builtBy", "buildpad-crew"], ["reward", String(build.reward || "dividend")]]
   };
   const mintLen = getMintLen([ExtensionType.MetadataPointer]);
   const metaLen = TYPE_SIZE + LENGTH_SIZE + pack(metadata).length;

@@ -1,5 +1,5 @@
 {
-  "name": "autopad",
+  "name": "buildpad",
   "version": "0.1.0",
   "description": "Autonomous community-built Solana meme launchpad \u2014 agents build what the feed votes for.",
   "type": "module",

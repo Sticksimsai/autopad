@@ -19,7 +19,7 @@ const ok = s => console.log("  ✔ " + s);
 const todo = s => console.log("  ○ " + s);
 const warn = s => console.log("  ✖ " + s);
 
-console.log("\nAUTOPAD CHAIN SETUP — Solana " + (process.env.SOLANA_CLUSTER || "mainnet-beta") + "\n");
+console.log("\nBUILDPAD CHAIN SETUP — Solana " + (process.env.SOLANA_CLUSTER || "mainnet-beta") + "\n");
 
 /* 1. launcher keypair */
 let created = false;

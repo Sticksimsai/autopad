@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// npm run chain:platform — one-shot: registers Autopad as a Raydium LaunchLab
-// PLATFORM, so Autopad earns a fee share on every trade of every token it
+// npm run chain:platform — one-shot: registers Buildpad as a Raydium LaunchLab
+// PLATFORM, so Buildpad earns a fee share on every trade of every token it
 // launches. Writes PLATFORM_ID into .env. Costs a small amount of SOL (rent+fee).
 import "dotenv/config";
 import fs from "fs";
 import { createPlatform } from "../chain.js";
 
 const bps = parseInt(process.env.PLATFORM_FEE_BPS || "100", 10); // 100 bps = 1%
-const name = process.env.PLATFORM_NAME || "Autopad";
+const name = process.env.PLATFORM_NAME || "Buildpad";
 const web = process.env.PUBLIC_URL || "";
 
 console.log(`\nCreating LaunchLab platform "${name}" — fee ${bps / 100}% on every curve trade…`);

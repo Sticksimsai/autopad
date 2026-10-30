@@ -8,7 +8,7 @@ import { refreshChainStatus, chainStatus, launchConfig, RPC_URL, CLUSTER, buildT
 import { REWARDS } from "./worker.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const VERSION = "0.13.2";
+export const VERSION = "0.14.0";
 const app = express();
 app.use(express.json({ limit: "64kb" })); // launch submissions can carry a small pfp data URI
 app.use(express.static(path.join(__dirname, "public")));
@@ -232,10 +232,10 @@ app.get("/api/meta/:id.json", (req, res) => {
   res.set("Cache-Control", "public, max-age=300");
   res.json({
     name: b.name, symbol: String(b.symbol || "").replace(/^\$/, ""),
-    description: `${b.tagline ? b.tagline + " — " : ""}${b.lore || ""} Launched on Autopad, the launchpad the agents build.`.trim(),
+    description: `${b.tagline ? b.tagline + " — " : ""}${b.lore || ""} Launched on Buildpad, the launchpad the agents build.`.trim(),
     image: b.pfp ? `${base}/api/pfp/${req.params.id}` : undefined,
     external_url: base,
-    attributes: [{ trait_type: "reward_mechanism", value: b.reward || "dividend" }, { trait_type: "built_by", value: "autopad-crew" }]
+    attributes: [{ trait_type: "reward_mechanism", value: b.reward || "dividend" }, { trait_type: "built_by", value: "buildpad-crew" }]
   });
 });
 
@@ -251,7 +251,7 @@ app.post("/api/trade/build", async (req, res) => {
   if (side === "sell" && !(amt >= 1 && amt <= 1e12)) return res.status(400).json({ error: "Sell amount must be at least 1 token." });
   // only tokens this site launched
   const known = Object.values(get().suggestions).some(v => v.onchain?.mint === mint);
-  if (!known) return res.status(404).json({ error: "Not an Autopad token." });
+  if (!known) return res.status(404).json({ error: "Not an Buildpad token." });
   try {
     const out = await buildTradeTx({ ownerPubkey: owner, mint, side, amountSol: amt, amountTokens: amt });
     res.json({ ok: true, ...out });
@@ -294,7 +294,7 @@ app.get("/api/debug", (req, res) => {
 app.get("/healthz", (req, res) => res.send("ok"));
 
 app.listen(PORT, () => {
-  console.log(`Autopad v${VERSION} on :${PORT} — agent designer: ${usingClaude ? "Claude (" + (process.env.ANTHROPIC_MODEL || "claude-haiku-5-5") + ")" : "MOCK (set ANTHROPIC_API_KEY to enable Claude)"}`);
+  console.log(`Buildpad v${VERSION} on :${PORT} — agent designer: ${usingClaude ? "Claude (" + (process.env.ANTHROPIC_MODEL || "claude-haiku-5-5") + ")" : "MOCK (set ANTHROPIC_API_KEY to enable Claude)"}`);
   console.log(`Solana RPC: ${RPC_URL ? `${CLUSTER} via ${process.env.HELIUS_API_KEY ? "Helius" : "custom URL"}` : "not configured (set HELIUS_API_KEY)"}`);
 });
 

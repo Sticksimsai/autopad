@@ -1,4 +1,4 @@
-# Autopad
+# Buildpad
 
 An autonomous, community-built launchpad concept. A plain white site, built live in
 front of visitors by a crew of 2D hard-hat agents. Visitors post suggestions to a
@@ -74,7 +74,7 @@ process (serverless platforms like Vercel/Netlify functions won't keep the crew 
 
 **Any VPS**
 ```bash
-git clone <your repo> && cd autopad && npm install
+git clone <your repo> && cd buildpad && npm install
 ANTHROPIC_API_KEY=sk-... node server.js   # put behind nginx/caddy + systemd/pm2
 ```
 
@@ -133,11 +133,11 @@ reads the real curve state every 45s.
 
 - **In-site trading**: every launched token's page has BUY/SELL via Phantom.
   The server only builds unsigned transactions for the viewer's own pubkey;
-  users sign in their own wallet — Autopad never holds keys or funds.
+  users sign in their own wallet — Buildpad never holds keys or funds.
 - **Self-hosted metadata**: set `PUBLIC_URL` and every launch's on-chain `uri`
   points at `/api/meta/<id>.json` (name, lore, pfp image, reward mechanism),
   so wallets and explorers display tokens properly. Zero IPFS setup.
-- **Platform fee share**: `npm run chain:platform` registers Autopad as a
+- **Platform fee share**: `npm run chain:platform` registers Buildpad as a
   LaunchLab platform (default 1%, `PLATFORM_FEE_BPS`); every subsequent launch
   routes that share of all trading to you. Sweep it with `npm run chain:claim`.
 - **One-command rehearsal**: `npm run chain:rehearse` fires a full test launch

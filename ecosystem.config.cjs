@@ -3,7 +3,7 @@
 // (Railway/Render/Fly restart crashed processes themselves; this is for bare servers.)
 module.exports = {
   apps: [{
-    name: "autopad",
+    name: "buildpad",
     script: "server.js",
     instances: 1,            // keep 1: the worker loop + JSON store are single-process
     autorestart: true,

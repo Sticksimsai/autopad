@@ -6,7 +6,7 @@ import { refreshChainStatus, launchConfig, platformOnchain } from "../chain.js";
 const s = await refreshChainStatus();
 const l = launchConfig();
 const p = await platformOnchain();
-console.log("\nAUTOPAD CHAIN STATUS");
+console.log("\nBUILDPAD CHAIN STATUS");
 console.log("  cluster   :", s.cluster);
 console.log("  rpc       :", s.configured ? (s.provider + (s.connected ? " · connected, slot " + s.slot.toLocaleString() : " · UNREACHABLE (" + s.error + ")")) : "not configured");
 console.log("  launcher  :", l.launcherPubkey || "not set (run npm run chain:setup)");

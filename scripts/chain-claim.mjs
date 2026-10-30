@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// npm run chain:claim — sweeps Autopad's accrued LaunchLab platform fees
+// npm run chain:claim — sweeps Buildpad's accrued LaunchLab platform fees
 // (from every token's trades) into the launcher/treasury wallet.
 import "dotenv/config";
 import { claimPlatformFees } from "../chain.js";

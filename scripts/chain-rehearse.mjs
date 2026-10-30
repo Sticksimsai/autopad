@@ -13,7 +13,7 @@ import util from "util";
 import { launchToken, launchConfig, fetchOnchainCurve, refreshChainStatus, fmtErr } from "../chain.js";
 
 const cfg = launchConfig();
-console.log("\nAUTOPAD LAUNCH REHEARSAL — cluster:", cfg.cluster, "| backend:", cfg.backend);
+console.log("\nBUILDPAD LAUNCH REHEARSAL — cluster:", cfg.cluster, "| backend:", cfg.backend);
 
 if (cfg.cluster !== "devnet" && !process.argv.includes("--mainnet")) {
   console.error("  ✖ refusing to rehearse on " + cfg.cluster + ". Point .env at devnet (see header of this script), or pass --mainnet if you truly mean it.\n");
@@ -35,7 +35,7 @@ if ((st.launcherSol ?? 0) < 0.06) {
 const tag = Math.random().toString(36).slice(2, 6).toUpperCase();
 const build = {
   kind: "token", symbol: "$REH" + tag, name: "Rehearsal " + tag,
-  tagline: "dress rehearsal, full pipeline", lore: "If you can read this on-chain, Autopad launches work.",
+  tagline: "dress rehearsal, full pipeline", lore: "If you can read this on-chain, Buildpad launches work.",
   color: "#0b9e68", curveTargetSol: 30, reward: "dividend", pfp: null
 };
 console.log("  launching", build.symbol, "…");
