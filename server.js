@@ -4,11 +4,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { get, mutate, log } from "./store.js";
 import { workerTick, publicState, usingClaude, netScore, marketFor } from "./worker.js";
-import { refreshChainStatus, chainStatus, launchConfig, RPC_URL, CLUSTER, buildTradeTx, buildLaunchTx, poolExists, isValidAddress } from "./chain.js";
+import { refreshChainStatus, chainStatus, chainCooldownMs, launchConfig, RPC_URL, CLUSTER, buildTradeTx, buildLaunchTx, poolExists, isValidAddress } from "./chain.js";
 import { REWARDS } from "./worker.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const VERSION = "0.14.0";
+export const VERSION = "0.14.2";
 const app = express();
 app.use(express.json({ limit: "64kb" })); // launch submissions can carry a small pfp data URI
 app.use(express.static(path.join(__dirname, "public")));
@@ -303,4 +303,7 @@ setInterval(() => workerTick().catch(e => console.error("[worker]", e.message)),
 
 /* chain heartbeat — refresh mainnet status every 15s when configured */
 refreshChainStatus().catch(() => {});
-setInterval(() => refreshChainStatus().catch(() => {}), 15000);
+setInterval(() => {
+  if (chainCooldownMs() > Date.now() - chainStatus().checkedAt) return; // backing off after 429
+  refreshChainStatus().catch(() => {});
+}, 60000); // 1 heartbeat/min ≈ 45k credits/month, well inside Helius free tier

@@ -572,7 +572,7 @@ async function refreshOnchainCurves() {
     if (curve) mutate(st => { if (st.suggestions[id]?.onchain) st.suggestions[id].onchain.curve = curve; });
   }
 }
-setInterval(() => refreshOnchainCurves().catch(() => {}), 45 * 1000).unref();
+setInterval(() => refreshOnchainCurves().catch(() => {}), 120 * 1000).unref(); // curves every 2 min
 
 /* ---------------- public state shape ---------------- */
 

@@ -97,21 +97,24 @@ export async function refreshChainStatus() {
   if (!conn || checking) return cache;
   checking = true;
   try {
-    const slot = await conn.getSlot("confirmed");
-    let blockTime = null, launcherSol = null;
-    try { blockTime = await conn.getBlockTime(slot); } catch {}
+    const slot = await conn.getSlot("confirmed"); // 1 credit per heartbeat — keep this lean
+    let launcherSol = cache.launcherSol;
     const kp = getLauncher();
-    if (kp) {
-      try { launcherSol = +((await conn.getBalance(kp.publicKey)) / LAMPORTS_PER_SOL).toFixed(4); } catch {}
+    if (kp && Date.now() - (cache._balAt || 0) > 10 * 60 * 1000) { // balance at most every 10 min
+      try { launcherSol = +((await conn.getBalance(kp.publicKey)) / LAMPORTS_PER_SOL).toFixed(4); cache._balAt = Date.now(); } catch {}
     }
-    cache = { ...cache, configured: true, connected: true, slot, blockTime, launcherSol, checkedAt: Date.now(), error: null };
+    cache = { ...cache, configured: true, connected: true, slot, launcherSol, checkedAt: Date.now(), error: null, _cooldown: 0 };
   } catch (e) {
-    cache = { ...cache, connected: false, checkedAt: Date.now(), error: String(e.message || e).slice(0, 120) };
+    const msg = String(e.message || e).slice(0, 120);
+    // on rate limiting, back off hard instead of hammering a capped key
+    const cooldown = /429|max usage|rate/i.test(msg) ? Math.min((cache._cooldown || 60) * 2, 3600) : 0;
+    cache = { ...cache, connected: false, checkedAt: Date.now(), error: msg, _cooldown: cooldown };
   } finally {
     checking = false;
   }
   return cache;
 }
+export function chainCooldownMs() { return (cache._cooldown || 0) * 1000; }
 export function chainStatus() { return cache; }
 
 /* ---------------- arming ---------------- */
