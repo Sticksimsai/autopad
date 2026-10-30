@@ -371,8 +371,9 @@ footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px so
         </span>
         <span class="pfp-hint" id="lfRewardHint">pro-rata SOL dividends to holders — funded from this token's fee stream</span>
       </label>
-      <label>CURVE TARGET <span id="lfCurveVal" class="curveval">50 SOL</span>
-        <input type="range" id="lfCurve" min="30" max="85" value="50">
+      <label>GRADUATION <span class="curveval">85 SOL raise</span>
+        <span class="pfp-hint">pump.fun-style curve — at 85 SOL raised, liquidity auto-migrates to a Raydium AMM pool</span>
+        <input type="range" id="lfCurve" min="85" max="85" value="85" hidden>
       </label>
       <div class="lf-actions">
         <button type="button" class="launch-btn small" id="lfWalletLaunch">CONNECT WALLET · LAUNCH NOW</button>
@@ -1101,7 +1102,6 @@ footer{font-size:11px;color:var(--dim);padding-block:14px 10px;border-top:1px so
     $("pvName").textContent=$("lfName").value.trim()||"Your token";
     $("pvTag").textContent=$("lfTag").value.trim()||"your tagline here";
     $("pvTarget").textContent=$("lfCurve").value;
-    $("lfCurveVal").textContent=$("lfCurve").value+" SOL";
     $("lfPreview").style.borderLeftColor=lfColor;
     var pv=$("pvPfp");
     pv.style.borderColor=lfColor;

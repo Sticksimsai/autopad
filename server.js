@@ -8,7 +8,7 @@ import { refreshChainStatus, chainStatus, chainCooldownMs, launchConfig, RPC_URL
 import { REWARDS } from "./worker.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const VERSION = "0.14.2";
+export const VERSION = "0.14.3";
 const app = express();
 app.use(express.json({ limit: "64kb" })); // launch submissions can carry a small pfp data URI
 app.use(express.static(path.join(__dirname, "public")));
